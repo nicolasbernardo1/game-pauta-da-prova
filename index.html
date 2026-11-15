@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Treino do Modelo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0B0D12;
+  --panel:#141821;
+  --panel-2:#1B202B;
+  --border:#262C38;
+  --border-soft:#1D222C;
+  --ink:#ECEEF2;
+  --muted:#8891A0;
+  --accent:#4FD1A5;
+  --accent-ink:#2FAE85;
+  --accent-soft:rgba(79,209,165,0.12);
+  --danger:#FF6B5E;
+  --danger-soft:rgba(255,107,94,0.14);
+  --warn:#FFC857;
+  --warn-soft:rgba(255,200,87,0.12);
+  --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans:'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:
+    linear-gradient(var(--bg),var(--bg)),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, var(--border-soft) 39px, var(--border-soft) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, var(--border-soft) 39px, var(--border-soft) 40px);
+  color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+}
+h1,h2,h3{font-family:var(--sans); font-weight:700; text-wrap:balance; margin:0; color:var(--ink);}
+b,strong{font-weight:700; color:var(--ink);}
+button{font-family:var(--sans); cursor:pointer;}
+.mono{font-family:var(--mono);}
+
+.app{width:100%; max-width:640px; padding:36px 18px 60px;}
+
+/* ---------- shared bits ---------- */
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent);}
+.card{background:var(--panel); border:1px solid var(--border); border-radius:16px;}
+.btn{
+  border-radius:10px; border:1px solid var(--border); background:var(--panel-2); color:var(--ink);
+  font-weight:600; font-size:14.5px; padding:12px 18px; transition:border-color .15s, transform .1s, background .15s;
+}
+.btn:hover{border-color:var(--accent);}
+.btn:active{transform:scale(.97);}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#06231A;}
+.btn.primary:hover{background:#5EE0B4;}
+.btn.ghost{background:transparent;}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+[hidden]{display:none !important;}
+
+/* ---------- screen: menu ---------- */
+#screenMenu{padding:8px 4px;}
+.hero-title{font-size:clamp(32px,7vw,44px); line-height:1.05; margin-top:10px;}
+.hero-title .dim{color:var(--muted); font-weight:500;}
+.hero-sub{color:var(--muted); font-size:14.5px; margin-top:12px; max-width:52ch; line-height:1.6;}
+
+.mode-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:12px; margin-top:28px;}
+@media (max-width:520px){ .mode-grid{grid-template-columns:1fr;} }
+.mode-card{
+  padding:20px 18px; text-align:left; display:flex; flex-direction:column; gap:8px; cursor:pointer;
+}
+.mode-card .ico{font-size:22px;}
+.mode-card h3{font-size:16.5px;}
+.mode-card p{font-size:13px; color:var(--muted); margin:0; line-height:1.5;}
+.mode-card .go{font-family:var(--mono); font-size:12px; color:var(--accent); margin-top:4px;}
+.mode-card .scope-note{display:block; color:var(--warn); margin-top:4px; font-size:12px;}
+
+.pauta-toggle{
+  display:flex; align-items:center; gap:12px; padding:13px 16px; margin-top:16px; cursor:pointer;
+}
+.pauta-toggle input{width:19px; height:19px; min-width:19px; accent-color:var(--warn);}
+.pauta-toggle span{font-size:13px; color:var(--ink); line-height:1.5;}
+
+.stats-row{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
+.stat-chip{
+  font-family:var(--mono); font-size:12px; color:var(--muted); background:var(--panel-2);
+  border:1px solid var(--border); border-radius:8px; padding:7px 11px;
+}
+.stat-chip b{color:var(--ink); font-family:var(--mono);}
+
+.module-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px;}
+@media (max-width:480px){ .module-grid{grid-template-columns:repeat(2,1fr);} }
+.module-pill{
+  padding:12px 10px; text-align:center; border-radius:10px; border:1px solid var(--border); background:var(--panel-2);
+  font-size:12.5px; font-weight:600; color:var(--ink); line-height:1.3;
+}
+.module-pill:hover{border-color:var(--accent);}
+
+.count-picker{padding:16px 18px; margin-top:16px;}
+.count-picker .hint-lbl{margin-bottom:0;}
+.count-btns{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.count-btns .btn{flex:none; min-width:64px; text-align:center;}
+.module-pill .n{display:block; font-family:var(--mono); font-size:10.5px; color:var(--accent); margin-bottom:3px;}
+.module-pill .cnt{display:block; font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:3px; font-weight:400;}
+
+/* ---------- screen: game ---------- */
+#screenGame{display:flex; flex-direction:column; gap:14px;}
+.hud{display:flex; align-items:center; gap:10px; padding:14px 16px; flex-wrap:wrap;}
+.hud-item{display:flex; flex-direction:column; gap:1px; min-width:0;}
+.hud-item .lbl{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+.hud-item .val{font-family:var(--mono); font-size:15px; font-weight:700; font-variant-numeric:tabular-nums;}
+.hud-item.loss .val{color:var(--warn);}
+.hud-item.acc .val{color:var(--accent);}
+.hud-lives{margin-left:auto; display:flex; gap:4px; font-size:15px;}
+.hud-lives .lost{opacity:.25; filter:grayscale(1);}
+
+.timerbar{height:5px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
+.timerbar .fill{height:100%; width:100%; background:var(--accent); transition:width 1s linear, background .3s;}
+.timerbar.hidden{visibility:hidden;}
+
+.qcard{padding:22px 20px 18px;}
+.qmeta{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+.qmeta .modtag{font-family:var(--mono); font-size:11px; color:var(--accent); background:var(--accent-soft); border-radius:6px; padding:3px 8px;}
+.qmeta .counter{font-family:var(--mono); font-size:11.5px; color:var(--muted);}
+.qtext{font-size:17.5px; font-weight:600; line-height:1.4;}
+.qtext.concept{font-size:15px; font-weight:500; line-height:1.65; color:var(--muted);}
+
+.options{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px;}
+@media (max-width:460px){ .options{grid-template-columns:1fr;} }
+.opt{
+  text-align:left; padding:14px 14px; border-radius:11px; border:1px solid var(--border); background:var(--panel-2);
+  color:var(--ink); font-size:14px; font-weight:500; line-height:1.4; transition:border-color .12s, background .12s, transform .08s;
+}
+.opt:hover{border-color:var(--accent);}
+.opt .k{font-family:var(--mono); color:var(--muted); margin-right:7px;}
+.opt.correct{background:var(--accent-soft); border-color:var(--accent); color:var(--accent);}
+.opt.wrong{background:var(--danger-soft); border-color:var(--danger); color:var(--danger);}
+.opt:disabled{cursor:default;}
+.opt.shake{animation:shake .32s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);}
+}
+
+.feedback{padding:14px 18px; border-radius:11px; font-size:13.5px; line-height:1.55; display:flex; gap:10px;}
+.feedback.ok{background:var(--accent-soft); border:1px solid var(--accent); color:var(--ink);}
+.feedback.bad{background:var(--danger-soft); border:1px solid var(--danger); color:var(--ink);}
+.feedback .tag{font-family:var(--mono); font-weight:700; white-space:nowrap;}
+.feedback.ok .tag{color:var(--accent);}
+.feedback.bad .tag{color:var(--danger);}
+
+.hl{color:var(--accent); font-weight:700;}
+.hl-warn{color:var(--warn); font-weight:700; text-decoration:underline; text-decoration-color:var(--warn); text-underline-offset:2px;}
+
+.game-actions{display:flex; justify-content:flex-end;}
+
+/* ---------- screen: end ---------- */
+#screenEnd{display:flex; flex-direction:column; gap:16px;}
+.end-head{padding:26px 22px; text-align:center;}
+.end-head .big{font-family:var(--mono); font-size:46px; font-weight:700; color:var(--accent); line-height:1;}
+.end-head .tag{color:var(--muted); font-size:13.5px; margin-top:8px;}
+.end-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.end-stat{padding:14px 10px; text-align:center;}
+.end-stat .v{font-family:var(--mono); font-weight:700; font-size:18px;}
+.end-stat .l{font-size:11px; color:var(--muted); margin-top:3px;}
+
+.chart-card{padding:16px 18px 10px;}
+.chart-card h3{font-size:13px; letter-spacing:.02em;}
+.chart-card .baseline-note{font-size:11px; color:var(--muted); margin-top:2px;}
+canvas{width:100%; display:block; margin-top:8px; cursor:crosshair;}
+.tooltip{
+  position:absolute; background:#05070A; border:1px solid var(--border); border-radius:7px; padding:5px 9px;
+  font-family:var(--mono); font-size:11px; color:var(--ink); pointer-events:none; transform:translate(-50%,-130%); white-space:nowrap;
+}
+
+.miss-list{display:flex; flex-direction:column; gap:8px;}
+.miss-item{padding:12px 14px; font-size:13px; line-height:1.5;}
+.miss-item .q{font-weight:600; margin-bottom:4px;}
+.miss-item .right{color:var(--accent);}
+
+.end-actions{display:flex; gap:10px; flex-wrap:wrap;}
+.end-actions .btn{flex:1;}
+
+footer.foot{text-align:center; font-size:11.5px; color:var(--muted); margin-top:30px;}
+
+/* ---------- essay mode ---------- */
+.essay-hud{padding:14px 16px; display:flex; align-items:center;}
+.essay-card{padding:22px 20px;}
+.essay-prompt{font-size:16.5px; font-weight:600; line-height:1.5; margin-bottom:14px;}
+.hint-row{margin-bottom:16px;}
+.hint-lbl{display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:7px;}
+.hint-chips{display:flex; flex-wrap:wrap; gap:7px;}
+.hint-chip{
+  font-size:12.5px; color:var(--accent-ink); background:var(--accent-soft); border:1px solid var(--accent);
+  border-radius:20px; padding:4px 11px; white-space:nowrap;
+}
+
+.concept-map{
+  background:var(--panel-2); border:1px solid var(--border); border-radius:11px; padding:12px 15px; margin-bottom:16px;
+}
+.concept-map summary{
+  cursor:pointer; font-size:12.5px; font-weight:600; color:var(--accent); list-style:none; user-select:none;
+}
+.concept-map summary::-webkit-details-marker{display:none;}
+.concept-map summary::before{content:'▾ '; display:inline-block;}
+.concept-map:not([open]) summary::before{content:'▸ ';}
+.concept-map ul{margin:12px 0 2px; padding-left:18px; display:flex; flex-direction:column; gap:7px;}
+.concept-map li{font-size:13.5px; color:var(--muted); line-height:1.55;}
+textarea#essayAnswer{
+  width:100%; min-height:170px; resize:vertical; border-radius:11px; border:1px solid var(--border);
+  background:var(--panel-2); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.6;
+  padding:14px; margin-bottom:14px;
+}
+textarea#essayAnswer:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+textarea#essayAnswer::placeholder{color:var(--muted);}
+.essay-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:4px;}
+.essay-actions .btn{flex:none;}
+
+.rubric-card{padding:20px 20px 18px; margin-top:14px;}
+.rubric-card h3{font-size:13px; letter-spacing:.02em; margin-bottom:4px;}
+.rubric-hint{font-size:12px; color:var(--muted); margin:0 0 14px;}
+.rubric-item{
+  display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer;
+}
+.rubric-item:last-of-type{border-bottom:none;}
+.rubric-item input{width:19px; height:19px; min-width:19px; margin-top:1px; accent-color:var(--accent);}
+.rubric-item span{font-size:13.8px; color:var(--muted); line-height:1.5;}
+.rubric-item input:checked ~ span{color:var(--ink);}
+.coverage-note{font-family:var(--mono); font-size:13px; color:var(--accent); margin-top:14px; padding-top:14px; border-top:1px solid var(--border);}
+
+.essay-summary-body{display:flex; flex-direction:column; gap:10px; margin:14px 0 18px;}
+.essay-sum-item{padding:12px 14px; font-size:13px; line-height:1.5;}
+.essay-sum-item .v{font-family:var(--mono); font-weight:700; color:var(--warn); margin-right:6px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ MENU ============ -->
+  <section id="screenMenu">
+    <span class="eyebrow">sessão de treino &middot; PLN</span>
+    <h1 class="hero-title">Treino do<br><span class="dim">Modelo.</span></h1>
+    <p class="hero-sub">Cada resposta certa reduz a loss e aumenta a acurácia do seu "modelo". Erre cinco vezes e o treinamento diverge. No final, você vê sua própria curva de treino.</p>
+    <p class="hero-sub" style="color:var(--warn); margin-top:8px;">⭐ marca os temas da <b>Pauta da Prova</b> — os 19 pontos que o professor destacou em aula.</p>
+
+    <label class="card pauta-toggle" id="pautaToggleWrap">
+      <input type="checkbox" id="pautaToggle">
+      <span>Só temas da Pauta da Prova (⭐) — desligue pra treinar o conteúdo completo dos 9 módulos</span>
+    </label>
+
+    <div class="mode-grid">
+      <div class="card mode-card" id="btnRush">
+        <span class="ico">⚡</span>
+        <h3>Treino Rápido</h3>
+        <p>Perguntas aleatórias, 20s cada, 5 vidas. Modo arcade. <small class="scope-note" id="rushScope"></small></p>
+        <span class="go">começar →</span>
+      </div>
+      <div class="card mode-card" id="btnReview">
+        <span class="ico">📖</span>
+        <h3>Por Módulo</h3>
+        <p>Sem relógio, sem vidas. Escolha um módulo e revise as perguntas dele com calma. <small class="scope-note" id="reviewScope"></small></p>
+        <span class="go">escolher módulo ↓</span>
+      </div>
+      <div class="card mode-card" id="btnEssay">
+        <span class="ico">✍️</span>
+        <h3>Treino Dissertativo</h3>
+        <p>Sem alternativas. Você escreve a resposta com suas palavras e confere com um gabarito de conceitos. <small class="scope-note" id="essayScope"></small></p>
+        <span class="go">escolher quantidade ↓</span>
+      </div>
+    </div>
+
+    <div class="module-grid" id="moduleGrid" hidden></div>
+
+    <div class="count-picker card" id="essayCountPicker" hidden>
+      <span class="hint-lbl">Quantas dissertações nesta sessão? (prioriza os temas e pontos que você mais erra)</span>
+      <div class="count-btns">
+        <button class="btn" data-n="5">5</button>
+        <button class="btn" data-n="10">10</button>
+        <button class="btn" data-n="all">Todas</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="screenGame" hidden>
+    <div class="card hud">
+      <div class="hud-item"><span class="lbl">Época</span><span class="val mono" id="hudEpoch">1/15</span></div>
+      <div class="hud-item loss"><span class="lbl">Loss</span><span class="val mono" id="hudLoss">1.39</span></div>
+      <div class="hud-item acc"><span class="lbl">Acurácia</span><span class="val mono" id="hudAcc">0%</span></div>
+      <div class="hud-item"><span class="lbl">Combo</span><span class="val mono" id="hudStreak">×1</span></div>
+      <div class="hud-lives" id="hudLives"></div>
+    </div>
+
+    <div class="timerbar" id="timerWrap"><div class="fill" id="timerFill"></div></div>
+
+    <div class="card qcard">
+      <div class="qmeta">
+        <span class="modtag" id="qModTag">Módulo</span>
+        <span class="counter" id="qCounter">1 / 15</span>
+      </div>
+      <div class="qtext" id="qText">Pergunta...</div>
+      <div class="options" id="qOptions"></div>
+    </div>
+
+    <div class="feedback" id="feedback" hidden>
+      <span class="tag" id="fbTag"></span>
+      <span id="fbText"></span>
+    </div>
+
+    <div class="game-actions">
+      <button class="btn primary" id="btnNext" hidden>Próxima →</button>
+    </div>
+  </section>
+
+  <!-- ============ END ============ -->
+  <section id="screenEnd" hidden>
+    <div class="card end-head">
+      <div class="eyebrow" id="endEyebrow">treino concluído</div>
+      <div class="big" id="endAcc">0%</div>
+      <div class="tag" id="endTag">de acurácia final</div>
+    </div>
+
+    <div class="end-grid">
+      <div class="card end-stat"><div class="v" id="endScore">0</div><div class="l">pontos</div></div>
+      <div class="card end-stat"><div class="v" id="endStreak">0</div><div class="l">melhor combo</div></div>
+      <div class="card end-stat"><div class="v" id="endLoss">0.00</div><div class="l">loss final</div></div>
+    </div>
+
+    <div class="card chart-card">
+      <h3>Acurácia acumulada</h3>
+      <canvas id="chartAcc" height="110"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>Loss por questão</h3>
+      <div class="baseline-note">linha tracejada = ln(4) ≈ 1.39, o loss de um chute aleatório entre 4 opções</div>
+      <canvas id="chartLoss" height="110"></canvas>
+    </div>
+
+    <div id="missBlock">
+      <h3 style="font-size:13px; letter-spacing:.02em; margin:4px 0 10px;">Pontos a revisar</h3>
+      <div class="miss-list" id="missList"></div>
+    </div>
+
+    <div class="end-actions">
+      <button class="btn primary" id="btnReplayMissed">Revisar temas →</button>
+      <button class="btn" id="btnBackMenu">Menu</button>
+    </div>
+  </section>
+
+  <!-- ============ ESSAY (dissertativo) ============ -->
+  <section id="screenEssay" hidden>
+    <div class="card essay-hud">
+      <div class="hud-item"><span class="lbl">Dissertação</span><span class="val mono" id="essayCounter">1/18</span></div>
+    </div>
+
+    <div class="card essay-card" id="essayWrite">
+      <div class="qmeta">
+        <span class="modtag" id="essayModTag">M1</span>
+      </div>
+      <div class="essay-prompt" id="essayPrompt">Pergunta dissertativa...</div>
+      <div class="hint-row">
+        <span class="hint-lbl">Se travar, pense em:</span>
+        <div class="hint-chips" id="hintChips"></div>
+      </div>
+
+      <details class="concept-map" id="conceptMap" open>
+        <summary>📖 Mapa do conceito — estude antes de escrever, depois feche e tente com suas palavras</summary>
+        <ul id="conceptMapList"></ul>
+      </details>
+
+      <textarea id="essayAnswer" placeholder="Escreva sua resposta aqui, explicando o mecanismo com suas próprias palavras — como se fosse responder na prova..."></textarea>
+      <div class="essay-actions" style="justify-content:space-between;">
+        <button class="btn" id="btnSkeleton">Inserir estrutura</button>
+        <button class="btn primary" id="btnRevealRubric">Ver gabarito →</button>
+      </div>
+    </div>
+
+    <div class="card rubric-card" id="rubricCard" hidden>
+      <h3>Pontos-chave que uma boa resposta cobre</h3>
+      <p class="rubric-hint">Releia o que você escreveu e marque o que você realmente explicou — não o que você "sabia" mas não colocou no papel.</p>
+      <div id="rubricList"></div>
+      <div class="coverage-note" id="coverageNote"></div>
+      <div class="essay-actions">
+        <button class="btn primary" id="btnNextEssay">Próxima dissertação →</button>
+      </div>
+    </div>
+
+    <div class="card" id="essaySummary" hidden style="padding:22px 20px;">
+      <h3 style="font-size:17px;">Sessão dissertativa concluída</h3>
+      <div class="essay-summary-body" id="essaySummaryBody"></div>
+      <div class="essay-actions" style="justify-content:flex-start;">
+        <button class="btn primary" id="btnEssayAgain">Praticar de novo</button>
+        <button class="btn" id="btnEssayMenu">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">Perguntas derivadas do guia de revisão de PLN (FGV) &middot; progresso salvo só neste navegador</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= question bank ================= */
+const MODULES = {
+  1:'Tokenização & Regex', 2:'PLN com Python', 3:'Corpora & Similaridade', 4:'N-gramas',
+  5:'BoW & TF-IDF', 6:'Word Embeddings', 7:'Classificação', 8:'Atenção & BERT/GPT', 9:'Transformers & LLMs'
+};
+
+const MODULE_RECAP = {
+  1:'Pré-processamento de texto: regex para limpar e extrair padrões, tokenização (por palavra, sentença ou subpalavra) e a <span class="hl">Lei de Zipf</span> (poucas palavras dominam, cauda longa de palavras raras). <span class="hl">Stemming</span> corta sufixo por regra, sem dicionário; <span class="hl">lematização</span> usa a classe gramatical (POS) + dicionário para achar a forma canônica — os dois são válidos, a escolha depende do objetivo.',
+  2:'Na prática, <span class="hl">NLTK</span> (acadêmico, flexível) e <span class="hl">spaCy</span> (industrial, pipeline integrado) resolvem as mesmas tarefas de formas diferentes. O pipeline do spaCy funciona como linha de montagem: cada etapa (tokenizador, POS, dependências, lematizador, NER) <span class="hl-warn">reaproveita a anotação</span> já feita pela etapa anterior no mesmo Doc.',
+  3:'Um corpus confiável é autêntico, representativo, vasto, legível por máquina e tem critério de coleta explícito. Para medir semelhança entre textos: <span class="hl">Levenshtein</span> mede edições de caracteres (numa substituição, trocar o caractere custa só <span class="hl-warn">1 edição</span> — mais barato que remover e inserir, que custaria 2), <span class="hl">Jaccard</span> mede sobreposição de conjuntos de termos, e <span class="hl">cosseno</span> mede o ângulo entre vetores — por isso ignora o tamanho do documento, ao contrário da distância Euclidiana.',
+  4:'Na essência, um modelo de linguagem serve para <span class="hl">prever a próxima palavra</span> dada as anteriores — ele atribui probabilidade a sequências de palavras. A <span class="hl">suposição de Markov</span> aproxima o contexto completo pelas últimas N−1 palavras, tornando viável estimar probabilidades por contagem direta (MLE). <span class="hl-warn">Suavização</span> (como o add-1 de Laplace) evita que combinações nunca vistas no treino recebam probabilidade zero.',
+  5:'Bag of Words conta palavras mas ignora raridade; <span class="hl">TF-IDF</span> pondera a frequência local pela raridade global (IDF), dispensando uma lista manual de stopwords — termos onipresentes no corpus recebem IDF baixo e perdem peso sozinhos. Com <span class="hl">normalização L2</span>, o produto escalar entre vetores já é diretamente a similaridade de cosseno — a base de qualquer busca por relevância.',
+  6:'<span class="hl">Word2Vec</span> treina uma rede numa tarefa descartável (prever o contexto a partir da palavra, ou vice-versa) só para que os pesos da camada oculta virem os embeddings. CBOW prevê a palavra central a partir do contexto (rápido); Skip-gram faz o oposto (melhor para palavras raras). Relações semânticas viram <span class="hl">direções estáveis</span> no espaço vetorial — é por isso que "rei − homem + mulher ≈ rainha".',
+  7:'Um pipeline de classificação supervisionada: vetorizar o texto, treinar um classificador (Naive Bayes ou regressão logística) e avaliar com precisão/recall/F1 — nunca só acurácia em dados desbalanceados. Cuidado redobrado com <span class="hl-warn">vazamento de dados</span>: o vetorizador só pode ser ajustado (fit) no conjunto de treino.',
+  8:'<span class="hl">Self-attention</span> (vetores Query, Key e Value por token) resolveu o gargalo de memória que travava RNNs e o Seq2Seq clássico, permitindo paralelismo total no treino. <span class="hl">BERT</span> usa o Encoder do Transformer (bidirecional, entende — o "Leitor"); <span class="hl">GPT</span> usa o Decoder (unidirecional, gera — o "Escritor").',
+  9:'Arquiteturas só-encoder (entendimento), só-decoder (geração) e encoder-decoder (tradução/sumarização) — nesta última, a <span class="hl">cross-attention</span> liga o Decoder à saída do Encoder (Query vem do decoder, Key/Value vêm do encoder), permitindo "olhar de volta" para a frase original a cada palavra gerada. Estratégias de decodificação como temperatura e top-k controlam o quanto a geração é previsível ou criativa. No ecossistema em volta de um LLM: <span class="hl">RAG</span> recupera contexto relevante antes de gerar, <span class="hl">RLHF/DPO</span> ajustam o modelo por preferência humana, e o <span class="hl">MCP</span> conecta o modelo a ferramentas externas.',
+};
+
+const QUESTIONS = [
+// ---- M1 ----
+{id:'1-1', mod:1, q:'Segundo a Lei de Zipf, a frequência de uma palavra é aproximadamente...', opts:[
+  'proporcional ao quadrado do seu rank','inversamente proporcional ao seu rank','constante para todas as palavras','proporcional ao tamanho do corpus'], c:1,
+  exp:'A <span class="hl">Lei de Zipf</span> diz que f(r) ∝ 1/r — a 2ª palavra mais frequente ocorre cerca de metade das vezes da 1ª.'},
+{id:'1-2', star:true, mod:1, q:'Qual frase descreve melhor a filosofia do spaCy?', opts:[
+  'Acadêmico, flexível, com múltiplas soluções por tarefa','Industrial, opinativo, com uma única solução por tarefa','Experimental, voltado apenas a protótipos de pesquisa','Genérico, sem nenhum pipeline de processamento integrado'], c:1,
+  exp:'spaCy é a "linha de montagem": <span class="hl">object-oriented</span>, pipeline integrado, uma solução ideal por tarefa. (A opção A descreve o NLTK — a "caixa de ferramentas" acadêmica e flexível.)'},
+{id:'1-3', mod:1, q:'O que é overstemming?', opts:[
+  'Palavras de sentidos diferentes caem no mesmo radical','A mesma palavra acaba gerando radicais diferentes','O stemmer deixa de cortar qualquer sufixo','É apenas outro nome para a lematização'], c:0,
+  exp:'Ex.: a etapa nominal do RSLP corta o "-o" de "universo" e o "-idade" de "universidade" — as duas sobram em "univers". O algoritmo nunca "sabe" o significado, só casa a terminação com a regra — por isso <span class="hl-warn">sentidos diferentes, mesmo radical</span>.'},
+{id:'1-4', star:true, mod:1, q:'Em qual situação remover stopwords costuma ATRAPALHAR?', opts:[
+  'Contagem simples de frequência de palavras no texto','Análise de sentimento sobre avaliações de produtos','Construção de uma Bag of Words para classificação','Indexação de documentos para busca por palavra-chave'], c:1,
+  exp:'"Este filme não é bom" vira "filme bom" se <span class="hl-warn">"não" for removido</span> — a negação some e o sentido se inverte.'},
+{id:'1-5', star:true, mod:1, q:'Por que a lematização geralmente precisa da classe gramatical (POS) da palavra?', opts:[
+  'Porque o POS acelera a etapa de tokenização','Porque a forma canônica depende da classe gramatical da palavra','Porque o POS substitui a necessidade de um dicionário','Porque sem POS a lematização não consegue rodar'], c:1,
+  exp:'O lema correto de uma palavra ambígua muda conforme sua função na frase (ex. "rio" substantivo × verbo) — por isso <span class="hl">POS vem antes</span> da consulta ao dicionário.'},
+{id:'1-6', mod:1, q:'O que são "hapax legomena"?', opts:[
+  'Palavras que aparecem só uma vez no corpus inteiro','As palavras mais frequentes de todo o corpus','Erros de digitação comuns em textos informais','Stopwords que já foram removidas do texto'], c:0,
+  exp:'Consequência direta da Lei de Zipf: cerca de <span class="hl">metade do vocabulário</span> (types) aparece uma única vez.'},
+{id:'1-7', star:true, mod:1, q:'Qual a diferença entre tokenização por palavra e por subpalavra?', opts:[
+  'Por palavra usa espaços e pontuação; por subpalavra reaproveita pedaços frequentes','Por palavra é sempre mais lenta do que por subpalavra','Por subpalavra só existe para textos em inglês','Por palavra sempre gera mais tokens do que por subpalavra'], c:0,
+  exp:'Tokenização por <span class="hl">subpalavra</span> (BPE/WordPiece) é o que permite a BERT e GPT lidar com palavras raras sem um token "desconhecido".'},
+{id:'1-8', mod:1, q:'O que a tokenização por sentença precisa tratar com cuidado?', opts:[
+  'Abreviações e números decimais, que não marcam fim de frase','Apenas a contagem total de palavras do texto','A frequência de cada palavra no corpus inteiro','A ordem alfabética das palavras dentro da frase'], c:0,
+  exp:'Um ponto depois de <span class="hl-warn">"Sr."</span> ou dentro de "3.5" não é fim de frase — por isso tokenizadores de sentença usam listas de exceção.'},
+{id:'1-9', mod:1, q:'Para que serve uma flag como re.IGNORECASE num padrão regex?', opts:[
+  'Muda o comportamento do casamento sem alterar o padrão em si','Converte o texto inteiro para maiúsculas antes de salvar','Substitui automaticamente acentos por letras sem acento','Torna qualquer busca em regex mais rápida'], c:0,
+  exp:'<span class="hl">re.IGNORECASE</span> faz o padrão casar independente de caixa, sem reescrever o regex com classes de caracteres.'},
+{id:'1-10', mod:1, q:'Por que grupos de captura entre parênteses são úteis em regex?', opts:[
+  'Permitem extrair sub-trechos específicos do que foi casado','Fazem qualquer padrão rodar mais rápido','Impedem que o padrão case com qualquer coisa','Substituem por completo a necessidade de re.findall'], c:0,
+  exp:'Ex.: extrair DDD e número de telefone em <span class="hl">grupos separados</span> com um único padrão de busca.'},
+{id:'1-11', mod:1, q:'O que caracteriza o funcionamento do stemmer RSLP, em termos de ordem das regras?', opts:[
+  'Aplica etapas em sequência fixa (plural, feminino, aumentativo...) até achar uma que corta','Testa todas as regras ao mesmo tempo e escolhe a mais curta','Consulta um dicionário completo antes de cortar qualquer sufixo','Aplica as etapas em ordem sorteada para cada palavra'], c:0,
+  exp:'A <span class="hl-warn">ordem das etapas importa</span>: trocar a sequência de corte muda o radical final da palavra.'},
+{id:'1-12', mod:1, q:'Qual frase resume corretamente a relação entre lexema, raiz e lema?', opts:[
+  'Lexema é a unidade abstrata; raiz é o corte sem dicionário; lema é a forma de dicionário','Os três termos são sinônimos perfeitos entre si','A raiz é sempre maior do que o lexema de origem','O lema é sempre idêntico à raiz, exceto em verbos'], c:0,
+  exp:'<span class="hl">Lexema</span> agrupa todas as formas (menino, meninos, menina); raiz é o corte cru; lema é a entrada de dicionário.'},
+
+// ---- M2 ----
+{id:'2-1', star:true, mod:2, q:'Por que o POS tagging padrão do NLTK é inadequado para português?', opts:[
+  'Foi treinado majoritariamente em corpus de inglês','NLTK não consegue fazer nenhum POS tagging','Português não possui classes gramaticais definidas','Processa POS tagging mais devagar que o spaCy'], c:0,
+  exp:'Para PT, o modelo do <span class="hl">spaCy</span> (treinado em corpus português) resolve corretamente.'},
+{id:'2-2', mod:2, q:'O que é um objeto Span no spaCy?', opts:[
+  'Um tipo específico de palavra vazia (stopword)','Uma fatia contígua de tokens dentro do Doc','Um erro comum de segmentação de sentenças','O vocabulário completo carregado pelo modelo'], c:1,
+  exp:'Ex.: cada sentença em doc.sents, ou cada entidade em doc.ents, é um <span class="hl">Span</span>.'},
+{id:'2-3', mod:2, q:'Na árvore de dependências sintáticas, o que a tag "nsubj" indica?', opts:[
+  'Sujeito nominal da oração','Determinante que acompanha o substantivo','Sinal de pontuação no fim da frase','Nome próprio formado por várias palavras'], c:0,
+  exp:'<span class="hl">nsubj</span> relaciona o sujeito da frase ao verbo (head) do qual ele depende.'},
+{id:'2-4', star:true, mod:2, q:'Qual a principal vantagem do pipeline do spaCy funcionar como "linha de montagem"?', opts:[
+  'Cada etapa reaproveita a anotação feita pela anterior','Cada etapa roda de forma isolada e independente','Cada etapa ignora o resultado das etapas anteriores','Cada etapa exige seu próprio modelo treinado'], c:0,
+  exp:'Ex.: o lematizador usa o <span class="hl">POS já calculado</span> pelo componente anterior no mesmo Doc.'},
+{id:'2-5', star:true, mod:2, q:'Qual biblioteca é mais indicada para lematização robusta em português?', opts:[
+  'NLTK, via WordNetLemmatizer','spaCy, via modelo treinado em PT','O módulo re, via expressões regulares','TF-IDF, via scikit-learn'], c:1,
+  exp:'spaCy usa morfologia + dicionário treinado em corpus PT; o WordNetLemmatizer do NLTK é <span class="hl-warn">limitado fora do inglês</span>.'},
+{id:'2-6', mod:2, q:'Qual característica é VERDADEIRA sobre stemming comparado à lematização?', opts:[
+  'Maior precisão semântica que a lematização','Sempre gera uma palavra válida de dicionário','Maior velocidade de processamento, porém menor precisão','Usa o contexto e a classe gramatical (POS)'], c:2,
+  exp:'Stemming é rápido e baseado em regras, sem dicionário — por isso <span class="hl-warn">mais impreciso</span> que a lematização.'},
+{id:'2-7', mod:2, q:'O que o atributo token.is_stop do spaCy indica?', opts:[
+  'Se aquele token pertence à lista de stopwords do modelo','Se o token é obrigatoriamente o último da frase','Se o token corresponde a uma entidade nomeada','Se o token foi corrigido por um corretor ortográfico'], c:0,
+  exp:'É um atributo booleano direto no <span class="hl">token</span>, calculado durante o próprio pipeline do spaCy.'},
+{id:'2-8', star:true, mod:2, q:'Por que a displaCy é útil para depurar um pipeline de PLN?', opts:[
+  'Visualiza graficamente a árvore de dependências ou as entidades nomeadas','Calcula sozinha a acurácia final do modelo','Treina um modelo de POS tagging novo do zero','Substitui a necessidade de qualquer tokenizador'], c:0,
+  exp:'<span class="hl">displacy.render(doc, style="dep")</span> (ou style="ent") deixa visível o que o modelo realmente "entendeu" da frase.'},
+{id:'2-9', mod:2, q:'O que a tag de dependência ROOT representa numa árvore sintática?', opts:[
+  'O núcleo da frase, do qual as outras relações derivam','Obrigatoriamente o primeiro token da frase','Um sinal de pontuação qualquer da frase','Sempre o verbo principal, nunca um substantivo'], c:0,
+  exp:'Toda árvore de dependências tem exatamente <span class="hl">um ROOT</span> — o ponto de partida de onde as demais relações se encaixam.'},
+{id:'2-10', mod:2, q:'Para que serve consultar nlp.pipe_names num modelo do spaCy?', opts:[
+  'Lista, em ordem, quais componentes rodam no pipeline carregado','Mostra o vocabulário completo do modelo treinado','Calcula a acurácia do pipeline no conjunto de teste','Remove componentes indesejados automaticamente'], c:0,
+  exp:'Mostra exatamente a <span class="hl">ordem</span> em que tagger, parser, lematizador e NER são aplicados sobre o Doc.'},
+{id:'2-11', star:true, mod:2, q:'O que torna o POS tagging do spaCy mais confiável que o do NLTK, especificamente em português?', opts:[
+  'O modelo pt_core_news foi treinado em corpus português, não majoritariamente inglês','O spaCy não usa nenhum tipo de modelo estatístico','O NLTK é incapaz de carregar qualquer texto em português','O spaCy ignora completamente o contexto da frase'], c:0,
+  exp:'A qualidade de um tagger depende do <span class="hl">idioma do corpus de treino</span> — não é uma vantagem genérica do spaCy, é do modelo carregado.'},
+
+// ---- M3 ----
+{id:'3-1', star:true, mod:3, q:'Quais são os 5 critérios de um bom corpus linguístico?', opts:[
+  'Grande, gratuito, de livre acesso, anotado e em inglês','Autêntico, representativo, vasto, legível por máquina e com critério explícito','Rápido, barato, automático, de fácil manutenção e curto','Anotado, supervisionado, rotulado, de alta qualidade e testado'], c:1,
+  exp:'Um corpus enviesado em qualquer desses critérios tende a produzir um <span class="hl-warn">modelo enviesado</span>.'},
+{id:'3-2', mod:3, q:'Por que a "distância cosseno" não é uma métrica de distância verdadeira?', opts:[
+  'Porque o resultado é sempre negativo','Porque não satisfaz a desigualdade triangular','Porque não existe fórmula fechada para ela','Porque ignora completamente a direção dos vetores'], c:1,
+  exp:'Das 4 propriedades de uma métrica (não-negatividade, identidade, simetria, triangular), só a <span class="hl">triangular</span> falha para (1−cos).'},
+{id:'3-3', star:true, mod:3, q:'O que a distância de Levenshtein mede?', opts:[
+  'Sobreposição de conjuntos de palavras de dois textos','O menor número de edições entre duas strings','O ângulo entre dois vetores de contagem','A frequência de uma palavra dentro do corpus'], c:1,
+  exp:'Calculada por <span class="hl">programação dinâmica</span> — cada célula usa o mínimo entre inserção, remoção e substituição.'},
+{id:'3-4', star:true, mod:3, q:'Por que o cosseno é preferido à distância Euclidiana para comparar documentos?', opts:[
+  'Cosseno ignora o tamanho do documento, só a direção','Euclidiana é sempre mais rápida de ser calculada','Cosseno sempre resulta em zero, em qualquer caso','Euclidiana captura melhor o significado semântico das palavras'], c:0,
+  exp:'Um texto repetido duas vezes muda a magnitude do vetor (Euclidiana muda), mas não sua <span class="hl">direção</span> (cosseno continua 1).'},
+{id:'3-5', star:true, mod:3, q:'A similaridade de Jaccard é calculada como:', opts:[
+  'O produto escalar dos vetores de contagem','|Interseção| dividido por |União| dos conjuntos de termos','A soma das frequências de cada termo','A distância euclidiana ao quadrado entre os vetores'], c:1,
+  exp:'Jaccard ignora repetição — só importa <span class="hl">presença/ausência</span> do termo no conjunto.'},
+{id:'3-6', star:true, mod:3, q:'Por que Jaccard e BoW falham ao comparar "carro" e "automóvel"?', opts:[
+  'São sinônimos, mas não compartilham nenhum termo exato','As duas palavras têm números de sílabas diferentes','Não existe um stemmer para português nesse caso','Ambas são tratadas como stopwords pelo sistema'], c:0,
+  exp:'Correspondência exata de termos não captura sinônimos — a similaridade cai a zero mesmo sendo palavras equivalentes. Só <span class="hl">embeddings</span> resolvem esse tipo de lacuna semântica.'},
+{id:'3-7', mod:3, q:'Na hierarquia Documento → Corpus → Token → Type, o que é um "type"?', opts:[
+  'Cada forma distinta de palavra, ou seja, o vocabulário único','Cada ocorrência de palavra, contando as repetições','O número total de documentos do corpus','A classe gramatical de uma palavra'], c:0,
+  exp:'<span class="hl">Types</span> = vocabulário único; tokens = total de ocorrências, repetições incluídas.'},
+{id:'3-8', star:true, mod:3, q:'O que caracteriza historicamente o Brown Corpus (1961-64)?', opts:[
+  'Um dos primeiros corpora digitais, com cerca de 1 milhão de palavras em inglês','Um corpus construído a partir de redes sociais modernas','Um corpus feito só com textos jurídicos em português','Um dicionário de sinônimos compilado manualmente'], c:0,
+  exp:'O <span class="hl">Brown Corpus</span> é referência histórica: ~1 milhão de palavras, 15 gêneros de texto, anterior à era digital da web.'},
+{id:'3-9', star:true, mod:3, q:'Qual a diferença entre a visão "micro" e "macro" na comparação de textos?', opts:[
+  'Micro opera em nível de caractere; macro opera em nível de termo/significado','Micro é sempre mais lenta de calcular do que macro','Macro só funciona com textos muito curtos','Micro nunca usa programação dinâmica'], c:0,
+  exp:'Visão <span class="hl">micro</span> (Levenshtein) serve à correção ortográfica/OCR; visão <span class="hl">macro</span> (cosseno/Jaccard) serve à busca e recomendação.'},
+{id:'3-10', star:true, mod:3, q:'Como n-gramas de caracteres ajudam a mitigar erros de digitação na comparação de textos?', opts:[
+  'Capturam semelhança parcial de forma, mesmo com letras trocadas','Eliminam por completo a necessidade de qualquer normalização','Convertem automaticamente a palavra para sua forma correta','Funcionam apenas para línguas sem acentuação'], c:0,
+  exp:'"Ratto" e "Rato" compartilham vários <span class="hl">bigramas de caracteres</span> mesmo com a letra duplicada — mitiga erro de forma, mas não resolve sinônimos.'},
+{id:'3-11', star:true, mod:3, q:'O que é o corpus Mac-Morpho, citado como referência em português?', opts:[
+  'Um corpus jornalístico anotado com classes gramaticais (POS)','Uma base de dados de imagens rotuladas','Um dicionário de rimas para poesia','Um conjunto de áudios para reconhecimento de fala'], c:0,
+  exp:'<span class="hl">Mac-Morpho</span> é construído sobre textos da Folha de S.Paulo, anotado com POS, muito usado para treinar/testar taggers em português.'},
+{id:'3-12', star:true, mod:3, q:'Por que os 5 critérios de um bom corpus importam na prática?', opts:[
+  'Um corpus enviesado em qualquer um deles tende a produzir um modelo enviesado','Eles servem só para fins acadêmicos, sem efeito prático','Só o critério "vasto" realmente afeta o modelo final','Esses critérios só valem para corpora em inglês'], c:0,
+  exp:'Um corpus que falha em ser <span class="hl-warn">representativo</span>, por exemplo, produz um modelo que generaliza mal para o que não está no treino.'},
+{id:'3-13', star:true, mod:3, q:'Na distância de Levenshtein, por que uma substituição costuma valer 1 única edição, em vez de uma remoção seguida de uma inserção?', opts:[
+  'Porque uma substituição nunca é permitida no cálculo da distância','Porque trocar o caractere resolve em 1 passo o que remover+inserir faria em 2','Porque a tabela de programação dinâmica ignora substituições por completo','Porque toda substituição tem, por definição, custo igual a zero'], c:1,
+  exp:'Remover e depois inserir custaria <span class="hl-warn">2 edições</span>; trocar direto resolve a mesma mudança em <span class="hl">1 edição</span> — por isso a substituição quase sempre barateia o caminho mínimo na tabela.'},
+
+// ---- M4 ----
+{id:'4-1', star:true, mod:4, q:'O que é a "suposição de Markov" aplicada a modelos de linguagem?', opts:[
+  'Que todas as palavras são estatisticamente independentes','Que o contexto completo pode ser aproximado pelas últimas N−1 palavras','Que o vocabulário do modelo é infinito','Que a ordem das palavras nunca importa'], c:1,
+  exp:'É essa aproximação (a <span class="hl">suposição de Markov</span>) que torna os n-gramas computacionalmente viáveis, em vez de exigir toda a frase anterior.'},
+{id:'4-2', mod:4, q:'Por que o Bag of Words não serve como modelo de linguagem?', opts:[
+  'Porque é computacionalmente lento demais para treinar','Porque ignora a ordem das palavras da frase','Porque o Bag of Words não existe de fato','Porque BoW já é, por definição, um modelo de linguagem'], c:1,
+  exp:'Um LM atribui probabilidades diferentes a "cada macaco no seu galho" e a uma versão embaralhada da mesma frase — BoW <span class="hl-warn">não distingue</span> as duas.'},
+{id:'4-3', star:true, mod:4, q:'Como se calcula P(wn | wn−1) pelo método de contagem (MLE)?', opts:[
+  'C(wn−1, wn) dividido por C(wn−1)','C(wn) dividido por C(wn−1, wn)','C(wn−1) multiplicado por C(wn)','log de C(wn)'], c:0,
+  exp:'Frequência relativa do <span class="hl">bigrama</span> sobre a contagem do unigrama de contexto.'},
+{id:'4-4', mod:4, q:'Qual o principal risco de aumentar muito o valor de N num modelo de n-gramas?', opts:[
+  'O modelo passa a treinar de forma mais rápida','A esparsidade cresce e o modelo passa a copiar o corpus','O vocabulário do modelo desaparece por completo','A suposição de Markov deixa de valer nesse caso'], c:1,
+  exp:'Com N muito alto (esparsidade crescendo como |V|^N), o modelo generaliza cada vez menos e <span class="hl-warn">memoriza</span> sequências específicas do treino.'},
+{id:'4-5', mod:4, q:'Para que serve a suavização (smoothing), como o add-1 de Laplace?', opts:[
+  'Acelerar o treino do modelo em qualquer corpus','Evitar que n-gramas nunca vistos recebam probabilidade zero','Reduzir artificialmente o tamanho do vocabulário usado','Aumentar automaticamente o valor de N escolhido'], c:1,
+  exp:'"Rouba" uma fatia de probabilidade dos eventos observados no treino e redistribui para os <span class="hl">não observados</span>.'},
+{id:'4-6', mod:4, q:'Quais são limitações centrais dos modelos de n-gramas?', opts:[
+  'Sem dependência de longa distância, sem generalização semântica','Funcionam apenas para textos escritos em inglês','Não conseguem contar palavras que se repetem','Exigem uma GPU para qualquer tipo de cálculo'], c:0,
+  exp:'N-gramas tratam palavras como <span class="hl-warn">símbolos isolados</span>, sem noção de significado ou sinônimos, e sem capturar relações distantes na frase.'},
+{id:'4-7', mod:4, q:'A regra da cadeia (chain rule) para decompor P(w1...wn) é...', opts:[
+  'Exata, mas exige estatísticas de contextos muito longos','Uma aproximação, assim como a suposição de Markov','Válida só para bigramas, nunca para trigramas','Usada apenas em modelos de classificação, não de linguagem'], c:0,
+  exp:'A regra da cadeia é <span class="hl">matematicamente exata</span> — o problema é prático: exige contar sequências longas demais para aparecerem o bastante no treino.'},
+{id:'4-8', mod:4, q:'Além de modelos de linguagem, para que mais servem os n-gramas?', opts:[
+  'Como features de texto — um bigrama pode capturar negação que um unigrama perde','Apenas para gerar números aleatórios em simulações','Para substituir por completo a necessidade de tokenização','Para calcular diretamente a acurácia de um classificador'], c:0,
+  exp:'Um bigrama como <span class="hl">"não gostei"</span> carrega informação que "não" e "gostei" isolados perdem.'},
+{id:'4-9', mod:4, q:'Qual a diferença entre geração gulosa (greedy) e por amostragem (sampling) de texto com n-gramas?', opts:[
+  'Greedy sempre escolhe a palavra mais provável; sampling sorteia proporcionalmente','Sampling nunca usa as probabilidades aprendidas no treino','Greedy gera textos sempre mais criativos do que sampling','Os dois métodos produzem exatamente o mesmo resultado'], c:0,
+  exp:'Greedy tende a ser <span class="hl-warn">repetitivo</span> (sempre a opção mais provável); sampling introduz variedade ao sortear conforme a distribuição aprendida.'},
+{id:'4-10', star:true, mod:4, q:'Como se estima P(wn | wn−2, wn−1) por contagem direta (MLE) num modelo de trigramas?', opts:[
+  'C(wn−2, wn−1, wn) dividido por C(wn−2, wn−1)','C(wn) dividido por C(wn−2, wn−1, wn)','C(wn−2) multiplicado por C(wn−1) e por C(wn)','A soma das contagens dos três tokens separados'], c:0,
+  exp:'Mesmo princípio do bigrama, só que o contexto agora tem <span class="hl">dois tokens anteriores</span> em vez de um.'},
+{id:'4-11', star:true, mod:4, q:'Por que um modelo de bigramas pode ser descrito como uma cadeia de Markov?', opts:[
+  'Porque cada palavra é um "estado" e a transição depende só do estado atual','Porque ele armazena toda a história da frase, sem nenhuma aproximação','Porque ele nunca usa contagens de frequência','Porque ele é implementado exclusivamente com redes neurais'], c:0,
+  exp:'Gerar texto com bigramas é literalmente <span class="hl">percorrer uma cadeia de Markov</span>: sortear o próximo estado dado apenas o atual.'},
+{id:'4-12', star:true, mod:4, q:'Na essência, o que é um modelo de linguagem?', opts:[
+  'Um sistema que classifica o sentimento de uma frase','Um sistema que atribui probabilidade e tenta prever a próxima palavra','Um sistema que remove stopwords automaticamente do texto','Um sistema que só funciona depois de treinado com rótulos manuais'], c:1,
+  exp:'Um modelo de linguagem, no fundo, serve para <span class="hl">prever a próxima palavra</span> dada as anteriores — é essa mesma tarefa, generalizada e em escala, que vira geração de texto num GPT.'},
+
+// ---- M5 ----
+{id:'5-1', star:true, mod:5, q:'O que o TF-IDF faz que o BoW puro não faz?', opts:[
+  'Ignora completamente a ordem das palavras','Pondera a frequência local pela raridade global do termo','Usa vetores densos em vez de esparsos','Remove acentos automaticamente do texto'], c:1,
+  exp:'BoW já ignora ordem; o que o TF-IDF acrescenta é o peso de <span class="hl">raridade (idf)</span> sobre a contagem (tf).'},
+{id:'5-2', mod:5, q:'Qual o valor do IDF (fórmula manual log(N/df)) de um termo que aparece em TODOS os documentos do corpus?', opts:[
+  'Infinito','Zero','Igual a 1','Igual ao número de documentos'], c:1,
+  exp:'df=N → log(N/N)=log(1)=0 — o termo é <span class="hl-warn">automaticamente descartado</span> do cálculo, como se fosse uma stopword.'},
+{id:'5-3', mod:5, q:'O que é df(t) — document frequency?', opts:[
+  'A contagem total de ocorrências do termo no corpus','Em quantos documentos distintos o termo aparece','A frequência relativa do termo dentro de um documento','O tamanho total do vocabulário do corpus'], c:1,
+  exp:'Ex.: "o" pode ocorrer 4 vezes no corpus, mas <span class="hl">df=3</span> se aparecer em só 3 documentos.'},
+{id:'5-4', mod:5, q:'Por que, com normalização L2, o produto escalar entre dois vetores TF-IDF já é a similaridade de cosseno?', opts:[
+  'Porque a norma de cada vetor passa a valer 1','Porque o scikit-learn sempre retorna cosseno por padrão','Porque a normalização L2 remove as stopwords','Porque TF-IDF já é, por definição, um ângulo'], c:0,
+  exp:'cos(A,B) = (A·B)/(‖A‖·‖B‖); se ‖A‖=‖B‖=1, o denominador vira 1 e o produto escalar JÁ é o <span class="hl">cosseno</span>.'},
+{id:'5-5', mod:5, q:'No pipeline de busca por TF-IDF, o que NUNCA se deve fazer ao processar uma nova consulta?', opts:[
+  'Usar transform no vetorizador já treinado','Re-ajustar (fit) o vetorizador com a consulta','Calcular a similaridade de cosseno','Ranquear os documentos pelo score'], c:1,
+  exp:'O vetorizador é treinado (fit) <span class="hl-warn">uma única vez</span> na indexação; a consulta só passa por transform, reaproveitando o vocabulário e o idf já aprendidos.'},
+{id:'5-6', mod:5, q:'O IDF suavizado do scikit-learn evita qual problema da fórmula "manual"?', opts:[
+  'Zerar ou dividir por zero em casos extremos','Calcular a frequência do termo em cada documento','Precisar normalizar cada vetor pela norma L2','Precisar tokenizar o texto antes de indexar'], c:0,
+  exp:'idf = ln((1+N)/(1+df)) + 1 nunca chega a zero nem gera <span class="hl">divisão por zero</span>, mesmo quando o termo aparece em todos ou em nenhum documento.'},
+{id:'5-7', mod:5, q:'Por que o TF-IDF "substitui" a necessidade de uma lista manual de stopwords?', opts:[
+  'Porque ele remove acentos e caracteres especiais do texto','Porque termos muito frequentes no corpus recebem IDF baixo','Porque ele ignora palavras com menos de 4 letras','Porque ele só atribui peso para substantivos do texto'], c:1,
+  exp:'A raridade estatística (IDF) faz o papel que uma regra linguística (lista de stopwords) faria manualmente — termos onipresentes <span class="hl">perdem peso sozinhos</span>.'},
+{id:'5-8', star:true, mod:5, q:'Numa matriz Bag of Words, o que cada linha e cada coluna representam?', opts:[
+  'Cada linha é um documento; cada coluna é um termo do vocabulário','Cada linha é uma letra; cada coluna é uma palavra inteira','Cada linha é o idioma; cada coluna é o autor do texto','Cada linha é uma stopword; cada coluna é um documento'], c:0,
+  exp:'É a <span class="hl">matriz documento-termo</span> — a base de qualquer vetorização por contagem.'},
+{id:'5-9', mod:5, q:'Por que a esparsidade da matriz TF-IDF é tratada com estruturas de dados especiais (scipy.sparse)?', opts:[
+  'Porque a maior parte das células é zero, e guardar só os não-zero economiza memória','Porque matrizes esparsas sempre calculam mais rápido do que densas em qualquer tarefa','Porque o scikit-learn não aceita matrizes comuns (numpy array)','Porque esparsidade aumenta automaticamente a precisão do modelo'], c:0,
+  exp:'Com vocabulários grandes, <span class="hl-warn">mais de 99% das células são zero</span> — guardar isso como matriz densa seria um desperdício enorme de memória.'},
+{id:'5-10', mod:5, q:'Qual a vantagem de deixar o IDF "decidir" a importância de um termo, em vez de usar uma lista fixa de stopwords?', opts:[
+  'O IDF se adapta ao corpus específico, sem depender de uma lista genérica pré-definida','O IDF é mais rápido de calcular do que carregar uma lista de palavras','Uma lista de stopwords sempre remove palavras erradas','O IDF funciona mesmo sem nenhum corpus de referência'], c:0,
+  exp:'Uma lista fixa é genérica; o IDF reflete a <span class="hl">raridade real naquele corpus</span> — útil até para jargão técnico que a lista genérica não cobriria.'},
+{id:'5-11', mod:5, q:'Por que, numa busca por TF-IDF, a consulta do usuário deve ser "transformada" e não "ajustada" (fit)?', opts:[
+  'Para manter o mesmo vocabulário e os mesmos pesos de IDF aprendidos na indexação','Porque fit é sempre mais rápido de executar do que transform','Porque a consulta nunca pode conter palavras do vocabulário original','Porque isso evita ter que calcular a similaridade de cosseno'], c:0,
+  exp:'Se a consulta "re-ajustasse" o vetorizador, o <span class="hl-warn">vocabulário e o IDF mudariam</span>, invalidando a comparação com os documentos já indexados.'},
+{id:'5-12', mod:5, q:'O que é o BM25, citado como evolução prática do TF-IDF?', opts:[
+  'Uma variação de ranking ainda usada em motores de busca e em pipelines de RAG','Um algoritmo de compressão de imagens para a web','Um tipo de rede neural recorrente bidirecional','Uma métrica para avaliar qualidade de tradução automática'], c:0,
+  exp:'<span class="hl">BM25</span> refina a ideia do TF-IDF com ajustes de saturação de frequência, e segue popular em busca e em RAG.'},
+{id:'5-13', star:true, mod:5, q:'Qual limitação do TF-IDF motiva diretamente o uso de embeddings?', opts:[
+  'TF-IDF não captura semântica — sinônimos têm similaridade zero entre si','TF-IDF é incapaz de processar mais de um documento por vez','TF-IDF exige necessariamente uma GPU para ser calculado','TF-IDF só funciona corretamente em textos muito curtos'], c:0,
+  exp:'TF-IDF ainda é <span class="hl-warn">correspondência exata de termos</span> — "carro" e "automóvel" continuam com similaridade zero entre si.'},
+
+// ---- M6 ----
+{id:'6-1', star:true, mod:6, q:'Qual a principal vantagem dos embeddings sobre o one-hot/BoW?', opts:[
+  'São vetores ainda mais esparsos que o BoW','Capturam relações semânticas como direções num espaço denso','Não exigem nenhum tipo de treino prévio','Ocupam mais memória que o BoW tradicional'], c:1,
+  exp:'Em vez de todas as palavras equidistantes (one-hot), conceitos como gênero ou plural viram <span class="hl">direções estáveis</span> no espaço.'},
+{id:'6-2', star:true, mod:6, q:'Qual a diferença entre CBOW e Skip-gram?', opts:[
+  'São o mesmo algoritmo, só com nomes diferentes','CBOW prevê a palavra central a partir do contexto','CBOW funciona apenas com uma única palavra de contexto','Skip-gram não depende de nenhuma rede neural'], c:1,
+  exp:'CBOW prevê a central a partir da média do contexto (rápido, bom p/ palavras frequentes — ex.: embeddings genéricos a partir de um acervo inteiro de notícias); Skip-gram faz o oposto (<span class="hl">melhor p/ palavras raras</span> — ex.: termos técnicos de um corpus médico ou jurídico).'},
+{id:'6-3', star:true, mod:6, q:'Por que a operação "rei − homem + mulher ≈ rainha" funciona?', opts:[
+  'É apenas uma coincidência estatística sem explicação real','Porque o treino capta uma direção estável no espaço vetorial','Porque o modelo memorizou essa frase durante o treino','Porque as quatro palavras têm o mesmo número de letras'], c:1,
+  exp:'Se a mesma relação (ex. gênero) aparece em muitos pares de palavras ao mesmo tempo (ator/atriz, rei/rainha...), ela vira uma <span class="hl">direção geométrica reutilizável</span>.'},
+{id:'6-4', star:true, mod:6, q:'No Word2Vec, onde "mora" o embedding aprendido de cada palavra?', opts:[
+  'Na camada de saída (softmax) da rede','Nos pesos da camada oculta (linear) da rede','No vocabulário bruto de entrada','Na matriz de confusão do classificador'], c:1,
+  exp:'A tarefa de prever contexto é descartável — o que importa é o subproduto: os pesos da <span class="hl">camada oculta</span> viram a matriz de embeddings.'},
+{id:'6-5', mod:6, q:'O que muda ao aumentar a janela de contexto no treino de embeddings?', opts:[
+  'Absolutamente nada muda no resultado final','Janela pequena capta sintaxe; janela grande capta tema','O modelo simplesmente para de treinar','O algoritmo de treino vira o TF-IDF'], c:1,
+  exp:'Janela=2 agrupa palavras com a mesma função gramatical; janela=10 agrupa palavras do <span class="hl">mesmo assunto</span>.'},
+{id:'6-6', mod:6, q:'Por que o Word2Vec é chamado de "auto-supervisionado"?', opts:[
+  'Porque ele não precisa de nenhum dado de treino','Porque o próprio corpus gera os pares de treino sozinho','Porque humanos rotulam cada par palavra-contexto manualmente','Porque ele não usa nenhuma função de perda real'], c:1,
+  exp:'Não existe anotação humana: a <span class="hl">coocorrência de palavras</span> no texto cru já gera os pares entrada/rótulo implicitamente.'},
+{id:'6-7', mod:6, q:'O que diferencia o GloVe do Word2Vec, em linhas gerais?', opts:[
+  'GloVe usa estatísticas globais de coocorrência; Word2Vec usa janelas locais de contexto','GloVe não gera nenhum vetor de palavra, só classifica texto','Word2Vec é sempre mais recente do que o GloVe','Os dois são exatamente o mesmo algoritmo, com nomes diferentes'], c:0,
+  exp:'<span class="hl">GloVe</span> fatora uma matriz de coocorrência global do corpus inteiro; Word2Vec aprende a partir de janelas locais, frase por frase.'},
+{id:'6-8', mod:6, q:'O que normalmente acontece quando se reduz demais o número de dimensões de um embedding?', opts:[
+  'O vetor perde capacidade de representar nuances semânticas distintas','O treino do modelo fica impossível de executar','A similaridade de cosseno deixa de poder ser calculada','O vocabulário do modelo aumenta automaticamente'], c:0,
+  exp:'Poucas dimensões <span class="hl-warn">espremem demais</span> o espaço, misturando conceitos que deveriam ficar separados.'},
+{id:'6-9', mod:6, q:'Como a tarefa de "detecção de intruso" (odd one out) se beneficia de embeddings?', opts:[
+  'Palavras de contextos parecidos ficam próximas no espaço, facilitando achar a que destoa','Ela exige contar caracteres em comum entre as palavras','Ela só funciona com listas de exatamente duas palavras','Ela depende de uma lista manual de sinônimos'], c:0,
+  exp:'Com embeddings, a palavra <span class="hl">semanticamente distante</span> das demais fica visivelmente mais longe no espaço vetorial.'},
+{id:'6-10', mod:6, q:'Uma forma simples de obter o embedding de uma frase inteira, sem um modelo dedicado, é...', opts:[
+  'Calcular a média dos vetores das palavras que compõem a frase','Somar o número de letras de cada palavra da frase','Escolher aleatoriamente o vetor de uma única palavra da frase','Multiplicar os vetores de todas as palavras entre si'], c:0,
+  exp:'A <span class="hl">média dos vetores</span> das palavras é uma aproximação simples e surpreendentemente útil do significado da frase inteira.'},
+{id:'6-11', mod:6, q:'Por que é preciso cuidado ao interpretar distâncias num gráfico 2D de embeddings (após PCA/t-SNE)?', opts:[
+  'A projeção para 2D é uma aproximação; a distância real está no espaço original','O gráfico 2D sempre mostra a distância exata entre as palavras','PCA e t-SNE produzem sempre o mesmo gráfico, então não importa qual usar','Gráficos 2D só podem ser feitos com no máximo 3 palavras'], c:0,
+  exp:'<span class="hl-warn">Projeções em 2D distorcem distâncias</span> — para medir similaridade de verdade, sempre volte ao espaço vetorial original.'},
+{id:'6-12', star:true, mod:6, q:'No "motor" de treino do Word2Vec, o que a rede realmente calcula a cada passo?', opts:[
+  'Projeta a entrada na camada oculta e tenta prever o contexto via softmax','Calcula diretamente a distância de Levenshtein entre duas palavras do corpus','Conta quantas vezes cada palavra do vocabulário aparece no corpus inteiro','Ordena o vocabulário inteiro por frequência antes de iniciar o treino'], c:0,
+  exp:'A palavra de entrada (one-hot) passa por uma projeção linear — a <span class="hl">camada oculta</span>, que depois vira o embedding — e a rede tenta acertar, via <span class="hl">softmax</span>, qual palavra aparece no contexto; o erro dessa previsão é propagado de volta para ajustar os pesos.'},
+
+// ---- M7 ----
+{id:'7-1', star:true, mod:7, q:'O que é "data leakage" num pipeline de classificação de texto?', opts:[
+  'Quando o modelo simplesmente erra muitas previsões novas','Quando informação do teste vaza para dentro do treino','Quando o dataset de treino é pequeno demais','Quando se usa TF-IDF no lugar do Bag of Words'], c:1,
+  exp:'Ex. clássico: fit do vetorizador em todos os dados antes do split. A correção: <span class="hl-warn">fit_transform só no treino</span>, transform (sem fit) no teste.'},
+{id:'7-2', star:true, mod:7, q:'Por que não usar só acurácia como métrica em dados desbalanceados?', opts:[
+  'A acurácia não pode ser calculada nesse caso','Ela pode ficar alta mesmo ignorando a classe minoritária','A acurácia é mais lenta de se calcular que F1','Essa limitação só vale para o algoritmo Naive Bayes'], c:1,
+  exp:'Ex.: 95% de e-mails legítimos → prever sempre "não-spam" já dá 95% de acurácia, <span class="hl-warn">ignorando o spam de verdade</span>.'},
+{id:'7-3', mod:7, q:'Qual é a hipótese "ingênua" do Naive Bayes?', opts:[
+  'Que todas as classes têm sempre a mesma probabilidade a priori','Que as palavras são condicionalmente independentes dado a classe','Que o texto nunca tem palavras repetidas','Que não podem existir classes desbalanceadas no problema'], c:1,
+  exp:'Mesmo sendo uma suposição falsa na prática, o produto de probabilidades costuma <span class="hl">ranquear a classe certa</span> corretamente.'},
+{id:'7-4', mod:7, q:'Como se resolve um problema de classificação multiclasse usando um algoritmo binário?', opts:[
+  'Não é possível usar algoritmos binários nesse caso','Estratégia one-vs-rest: um classificador binário por classe','Convertendo o problema em regressão linear simples','Removendo as classes excedentes do dataset'], c:1,
+  exp:'Cada classificador binário aprende "esta classe vs. todas as outras"; escolhe-se a de <span class="hl">maior score</span>.'},
+{id:'7-5', mod:7, q:'O que é a métrica F1?', opts:[
+  'A acurácia simplesmente multiplicada por dois','A média harmônica entre precisão e recall','O número total de classes do problema','O tempo total de treino do modelo'], c:1,
+  exp:'F1 = 2·(precisão·recall)/(precisão+recall) — equilibra os dois quando <span class="hl">um deles sozinho enganaria</span>.'},
+{id:'7-6', star:true, mod:7, q:'O que é a "tabela atributo-valor" no contexto de classificação de texto?', opts:[
+  'A estrutura que converte texto em linhas (documentos) e colunas (atributos)','Uma tabela que lista só os erros do modelo treinado','Um dicionário de sinônimos usado na normalização do texto','O nome técnico da matriz de confusão'], c:0,
+  exp:'É o que permite tratar texto como <span class="hl">ML clássico</span>: cada documento vira linha, cada feature (contagem, TF-IDF, embedding) vira coluna.'},
+{id:'7-7', mod:7, q:'Para que serve usar stratify=y ao dividir dados em treino e teste?', opts:[
+  'Manter a mesma proporção das classes em treino e teste, mesmo com dados desbalanceados','Garantir que treino e teste tenham exatamente o mesmo tamanho','Remover automaticamente as classes minoritárias do problema','Acelerar o tempo de treino do classificador final'], c:0,
+  exp:'Sem isso, um corte aleatório pode deixar a <span class="hl-warn">classe minoritária quase ausente</span> num dos dois conjuntos.'},
+{id:'7-8', mod:7, q:'O que diferencia um problema multirrótulo de um problema multiclasse?', opts:[
+  'Multirrótulo permite várias classes ao mesmo tempo por documento; multiclasse permite só uma','Multiclasse sempre tem exatamente duas classes possíveis','Multirrótulo não pode ser resolvido por nenhum algoritmo de ML','Os dois termos descrevem exatamente o mesmo tipo de problema'], c:0,
+  exp:'Um artigo pode ter as tags <span class="hl">"saúde" e "tecnologia" ao mesmo tempo</span> — isso é multirrótulo, não multiclasse.'},
+{id:'7-9', mod:7, q:'Qual a vantagem da validação cruzada k-fold em relação a um único split treino/teste?', opts:[
+  'Dá uma estimativa mais robusta de desempenho, especialmente com poucos dados','Elimina completamente a necessidade de qualquer métrica de avaliação','Garante que o modelo nunca erre nenhuma previsão nova','Só funciona corretamente com o algoritmo Naive Bayes'], c:0,
+  exp:'Treinar e validar <span class="hl">k vezes</span>, alternando a parte usada para validação, reduz a chance de um split "de sorte" distorcer a avaliação.'},
+{id:'7-10', mod:7, q:'Por que a regressão logística é chamada de modelo "discriminativo"?', opts:[
+  'Ela modela P(classe|texto) diretamente, sem modelar como o texto é gerado','Ela sempre discrimina (rejeita) a classe minoritária do problema','Ela não pode ser usada em problemas de classificação de texto','Ela exige uma rede neural profunda para funcionar'], c:0,
+  exp:'Ao contrário do Naive Bayes (que modela como os dados são gerados), a regressão logística vai direto ao ponto: estimar <span class="hl">P(classe | texto)</span>.'},
+{id:'7-11', star:true, mod:7, q:'Qual a ordem correta de um pipeline típico para classificar reviews de produtos (positivo/negativo)?', opts:[
+  'Treinar o classificador, depois coletar e rotular os dados','Vetorizar todo o corpus junto, depois dividir em treino e teste','Pré-processar, dividir treino/teste, vetorizar (fit só no treino), treinar e avaliar','Avaliar com F1, depois dividir os dados em treino e teste'], c:2,
+  exp:'A ordem importa: pré-processar → <span class="hl-warn">dividir treino/teste antes de vetorizar</span> (senão é vazamento de dados) → fit_transform só no treino, transform no teste → treinar → avaliar com precisão/recall/F1, não só acurácia.'},
+
+// ---- M8 ----
+{id:'8-1', star:true, mod:8, q:'Por que uma RNN não paraleliza bem durante o treino?', opts:[
+  'Porque ela usa muito pouca memória','Porque o estado de cada passo depende do anterior','Porque RNNs não têm pesos compartilhados','Porque RNN é sempre mais rápida que o Transformer'], c:1,
+  exp:'h_t depende de h_(t-1): não dá pra calcular a palavra 10 antes de resolver a 9 — o processamento é <span class="hl-warn">sequencial</span>.'},
+{id:'8-2', star:true, mod:8, q:'No self-attention, o que representam Query, Key e Value?', opts:[
+  'Três hiperparâmetros da taxa de aprendizado do modelo','Três vetores aprendidos: busca, oferta e conteúdo do token','Três formas diferentes de tokenizar o mesmo texto','As três camadas fixas que formam uma RNN'], c:1,
+  exp:'<span class="hl">Query</span> = o que o token busca; <span class="hl">Key</span> = o que ele oferece; <span class="hl">Value</span> = seu conteúdo — somado e ponderado pela afinidade entre os dois primeiros.'},
+{id:'8-3', star:true, mod:8, q:'Qual frase melhor resume a diferença entre BERT e GPT (conforme o material da disciplina)?', opts:[
+  'BERT é o "Leitor"; GPT é o "Escritor" de texto','Os dois modelos têm exatamente a mesma arquitetura','BERT serve apenas para gerar textos novos','GPT é bidirecional, e BERT não é'], c:0,
+  exp:'Frase literal do material: BERT usa o <span class="hl">Encoder</span> (entende, bidirecional); GPT usa o <span class="hl">Decoder</span> (gera, unidirecional).'},
+{id:'8-4', star:true, mod:8, q:'Como o BERT aprende contexto bidirecional durante o pré-treino?', opts:[
+  'Lendo cada frase de trás para frente duas vezes','Mascarando palavras e prevendo-as com os dois lados do contexto','Usando só o passado da frase, como o GPT','Ele não passa por nenhum tipo de pré-treino'], c:1,
+  exp:'Prever a palavra mascarada (<span class="hl">Masked Language Model</span>) exige contexto dos dois lados simultaneamente — impossível pra um modelo unidirecional.'},
+{id:'8-5', mod:8, q:'Qual tokenizador o BERT usa, e qual o GPT usa?', opts:[
+  'BERT usa WordPiece; GPT usa BPE (Byte-Pair Encoding)','Os dois usam tokenização por caractere isolado','BERT usa BPE; GPT usa WordPiece','Nenhum dos dois tokeniza em subpalavras'], c:0,
+  exp:'Ambos trabalham com subpalavras, mas com algoritmos de vocabulário diferentes: <span class="hl">WordPiece</span> e <span class="hl">BPE</span>.'},
+{id:'8-6', star:true, mod:8, q:'O que o mecanismo de atenção (Bahdanau et al., 2015) resolveu, que o Seq2Seq clássico não resolvia?', opts:[
+  'O gargalo de comprimir toda a entrada num vetor fixo','O problema da velocidade de treino em GPUs','O limite máximo de tamanho do vocabulário','A necessidade de um hardware muito especializado'], c:0,
+  exp:'Antes da atenção, frases longas perdiam qualidade porque tudo dependia só do <span class="hl-warn">último estado oculto</span> do encoder.'},
+{id:'8-7', mod:8, q:'Por que o Transformer precisa de um "positional encoding" somado ao embedding de cada token?', opts:[
+  'Porque a atenção, sozinha, trata a frase como um conjunto, sem noção de ordem','Porque isso substitui a necessidade de qualquer tokenização','Porque sem ele o modelo não conseguiria calcular nenhum embedding','Porque positional encoding acelera o treino em GPU'], c:0,
+  exp:'Sem essa informação extra, trocar a <span class="hl-warn">ordem das palavras</span> não mudaria em nada o resultado da atenção.'},
+{id:'8-8', mod:8, q:'Por que usar várias "cabeças" de atenção em paralelo (multi-head attention)?', opts:[
+  'Cada cabeça pode aprender a focar num tipo diferente de relação entre os tokens','Múltiplas cabeças sempre tornam o treino mais lento sem nenhum ganho','Isso substitui a necessidade de qualquer camada feed-forward','Cada cabeça processa um idioma diferente do texto'], c:0,
+  exp:'Uma cabeça pode focar em <span class="hl">concordância verbal</span>, outra em correferência de pronomes — tudo em paralelo.'},
+{id:'8-9', mod:8, q:'Qual a vantagem prática de fazer fine-tuning sobre um modelo pré-treinado como o BERT?', opts:[
+  'Atingir bom desempenho numa tarefa nova com muito menos dados e computação','Eliminar completamente a necessidade de qualquer dado rotulado','Garantir 100% de acurácia em qualquer tarefa nova','Tornar o modelo menor em número de parâmetros automaticamente'], c:0,
+  exp:'O modelo já "leu" uma quantidade massiva de texto no pré-treino — o fine-tuning só ajusta uma <span class="hl">camada final</span> para a tarefa específica.'},
+{id:'8-10', star:true, mod:8, q:'Por que é possível usar só o Encoder OU só o Decoder de um Transformer, dependendo da tarefa?', opts:[
+  'Entendimento/classificação precisa só de representação; geração precisa prever o próximo token','O Encoder e o Decoder são, na prática, exatamente o mesmo bloco','Usar os dois juntos é sempre proibido por definição','Só o Decoder consegue processar texto em português'], c:0,
+  exp:'BERT usa só o <span class="hl">Encoder</span> (entendimento); GPT usa só o <span class="hl">Decoder</span> (geração) — cada tarefa aproveita a metade que precisa.'},
+{id:'8-11', mod:8, q:'O que é o BERTimbau, citado como referência de BERT em português?', opts:[
+  'Uma versão do BERT pré-treinada no corpus brWaC, voltada ao português','Um dataset de áudio para reconhecimento de fala em português','Um algoritmo de tradução automática específico do Brasil','Uma técnica de compressão exclusiva para modelos GPT'], c:0,
+  exp:'<span class="hl">BERTimbau</span> (Souza, Nogueira & Lotufo, 2020) foi treinado no corpus brWaC, texto da web em português brasileiro.'},
+{id:'8-12', star:true, mod:8, q:'Em termos de alcance entre posições distantes de uma frase, qual a vantagem da atenção sobre a RNN?', opts:[
+  'A atenção conecta qualquer par de posições diretamente, sem passos intermediários','A atenção só consegue olhar para a palavra imediatamente anterior','RNN sempre conecta posições distantes mais rápido que atenção','Atenção e RNN têm exatamente o mesmo alcance de contexto'], c:0,
+  exp:'Numa RNN, a informação precisa "viajar" por cada passo intermediário; na atenção, a ligação entre posições distantes é <span class="hl">direta</span>.'},
+{id:'8-13', star:true, mod:8, q:'Por que o Transformer representou uma mudança tão grande em relação à computação sequencial anterior (RNNs)?', opts:[
+  'Porque resolveu ao mesmo tempo o problema de velocidade (paralelismo) e de memória (atenção direta)','Porque eliminou por completo a necessidade de qualquer treino supervisionado','Porque reduziu o vocabulário do modelo a um tamanho fixo e pequeno','Porque passou a processar texto sem nenhum tipo de embedding'], c:0,
+  exp:'Antes, o processamento era <span class="hl-warn">sequencial</span> (lento, sem paralelismo) e tinha <span class="hl-warn">memória curta</span> (informação distante se perdia). A atenção resolve os dois de uma vez: o cálculo é paralelizável, e qualquer posição se conecta <span class="hl">diretamente</span> a qualquer outra.'},
+
+// ---- M9 ----
+{id:'9-1', star:true, mod:9, q:'Qual a diferença entre um modelo só-encoder e um modelo só-decoder?', opts:[
+  'Encoder entende e classifica; decoder gera texto novo','Os dois fazem exatamente a mesma coisa','Encoder só funciona para textos em português','Decoder não usa nenhum tipo de atenção'], c:0,
+  exp:'Família encoder (BERT) → entendimento/classificação; família decoder (GPT, Llama) → <span class="hl">geração</span>.'},
+{id:'9-2', mod:9, q:'O que é RAG (Retrieval-Augmented Generation)?', opts:[
+  'Um tipo específico de rede neural recorrente','Recuperar trechos relevantes e inseri-los no prompt','Um algoritmo de compressão/quantização de modelo','Uma métrica de avaliação de qualidade de texto'], c:1,
+  exp:'O modelo não "sabe" o conteúdo de antemão — ele lê o trecho <span class="hl">recuperado por similaridade</span> como parte do próprio prompt, antes de gerar a resposta.'},
+{id:'9-3', mod:9, q:'Qual a principal diferença de mecanismo entre RLHF e DPO?', opts:[
+  'RLHF usa um modelo de recompensa; DPO ajusta direto, sem ele','RLHF e DPO seguem exatamente o mesmo processo de treino','DPO sempre exige muito mais GPUs do que RLHF','RLHF não utiliza nenhum dado de preferência humana'], c:0,
+  exp:'RLHF treina um modelo de recompensa separado + RL (PPO); DPO é mais simples: ajusta os pesos direto sobre pares (preferida, rejeitada), como um <span class="hl">treino supervisionado</span>.'},
+{id:'9-4', mod:9, q:'Para que serve o MCP (Model Context Protocol)?', opts:[
+  'Treinar embeddings de palavras do zero, sem corpus','Conectar LLMs a ferramentas e dados por um protocolo aberto','Medir a perplexidade final de um modelo de linguagem','Substituir por completo o mecanismo de self-attention'], c:1,
+  exp:'Sem um protocolo comum, cada modelo precisaria integrar cada ferramenta individualmente (N×M); o MCP transforma isso em <span class="hl">N+M</span>.'},
+{id:'9-5', mod:9, q:'O que a temperatura controla na geração de texto de um LLM?', opts:[
+  'O tamanho do vocabulário do modelo','O quanto a distribuição do próximo token é concentrada','A velocidade de processamento da GPU','O número de camadas do Transformer'], c:1,
+  exp:'Temperatura baixa concentra no token mais provável (previsível); temperatura <span class="hl-warn">alta espalha</span> a distribuição (mais criativo/arriscado).'},
+{id:'9-6', mod:9, q:'Como o Mixture of Experts (MoE) reduz o custo de inferência de um LLM muito grande?', opts:[
+  'Um roteador ativa só um subconjunto de "especialistas" por token, não o modelo inteiro','Ele reduz o número total de parâmetros do modelo para quase zero','Ele elimina por completo a necessidade de qualquer treinamento','Ele converte todo o modelo para rodar sem nenhuma GPU'], c:0,
+  exp:'Ex.: DeepSeek-V3 tem centenas de bilhões de parâmetros totais, mas ativa só uma <span class="hl">fração por token</span> processado.'},
+{id:'9-7', mod:9, q:'O que o termo "context rot" descreve sobre prompts muito longos?', opts:[
+  'Entradas longas demais podem, na prática, piorar o desempenho do modelo','Prompts longos sempre melhoram proporcionalmente a qualidade da resposta','O modelo apaga automaticamente metade do prompt recebido','É o nome técnico para erro de digitação no prompt'], c:0,
+  exp:'Mais contexto não é sempre melhor — depois de certo ponto, informação <span class="hl-warn">em excesso pode atrapalhar</span> em vez de ajudar.'},
+{id:'9-8', mod:9, q:'Qual a diferença entre as técnicas de prompting "few-shot" e "chain-of-thought"?', opts:[
+  'Few-shot dá exemplos prontos no prompt; chain-of-thought pede o raciocínio passo a passo','As duas técnicas significam exatamente a mesma coisa','Few-shot só funciona em modelos muito pequenos','Chain-of-thought substitui a necessidade de qualquer exemplo no prompt'], c:0,
+  exp:'<span class="hl">Few-shot</span> mostra "faça assim"; <span class="hl">chain-of-thought</span> pede "pense em voz alta antes de responder".'},
+{id:'9-9', mod:9, q:'Qual o principal risco de usar "LLM como juiz" para avaliar respostas de outros modelos?', opts:[
+  'Vieses como preferir respostas mais longas ou a posição em que aparecem','Ser impossível de automatizar em qualquer escala','Custar exatamente o mesmo que avaliação humana','Funcionar apenas para tarefas de tradução automática'], c:0,
+  exp:'Um juiz-LLM pode ter <span class="hl-warn">viés de verbosidade ou de posição</span>, favorecendo respostas mais longas só por parecerem mais completas.'},
+{id:'9-10', star:true, mod:9, q:'Numa arquitetura Transformer completa (encoder-decoder, ex. tradução), para que serve a cross-attention?', opts:[
+  'Permite ao decoder consultar diretamente as representações geradas pelo encoder','Substitui por completo a necessidade de self-attention no decoder','Serve só para acelerar o treino em GPU, sem efeito na qualidade','Conecta duas palavras dentro da mesma frase de entrada'], c:0,
+  exp:'Na cross-attention, o <span class="hl">Query vem do decoder</span> e o <span class="hl">Key/Value vêm do encoder</span> — é essa ponte que deixa o decoder "olhar de volta" para a frase original enquanto gera a tradução/resumo, palavra por palavra.'},
+];
+
+/* ================= dissertative / essay prompts ================= */
+const ESSAY_PROMPTS = [
+{id:'e1a', mod:1, q:'Explique como o algoritmo RSLP decide o radical de uma palavra em português, e por que stemmers diferentes podem chegar a resultados diferentes para a mesma palavra.', points:[
+  'Aplica etapas em sequência fixa por categoria (plural, feminino, aumentativo/diminutivo, adverbial, nominal, verbal, vogal temática, acentos)',
+  'Cada etapa só corta o sufixo se o radical restante atingir um tamanho mínimo',
+  'Cada etapa tem sua própria lista de exceções',
+  'Não consulta nenhum dicionário — é puramente baseado em regras',
+  'Stemmers diferentes (Porter, Snowball, RSLP) têm regras e exceções próprias, por isso divergem entre si',
+  'Traço concreto: em "universo", a etapa nominal casa o sufixo "-o" e corta, sobrando "univers"; em "universidade", a mesma etapa casa o sufixo "-idade" e corta, sobrando também "univers"',
+  'As duas palavras têm sentidos totalmente diferentes (cosmos × instituição de ensino), mas colapsam no mesmo radical só por coincidência de terminação — isso é "overstemming"',
+], hints:['ordem fixa de etapas', 'tamanho mínimo do radical', 'universo/universidade → univers', 'overstemming = coincidência de sufixo']},
+{id:'e1b', star:true, mod:1, q:'Explique por que a lematização geralmente exige saber a classe gramatical (POS) da palavra antes de buscar o lema no dicionário.', points:[
+  'Pense no dicionário como organizado por classe gramatical, não como uma lista única — a forma canônica de um substantivo é diferente da de um verbo',
+  'Exemplo concreto: "rio" como substantivo ("o rio Amazonas") tem lema "rio"; "rio" como verbo ("eu rio muito") tem lema "rir" — mesma grafia, lemas diferentes',
+  'Sem saber a classe gramatical primeiro, o lematizador não tem como decidir qual das duas entradas do dicionário buscar',
+  'Por isso a ordem é sempre: 1) decidir a classe gramatical pelo contexto da frase (POS tagging) → 2) só depois consultar o dicionário usando (palavra, classe) como chave',
+  'É esse passo extra que torna a lematização mais lenta que o stemming (que nunca consulta nada, só corta sufixo por regra)',
+  'E é o que permite resolver casos irregulares que o stemming nunca resolveria, como "tiveram" → "ter" (não existe regra de corte de sufixo que chegue nisso)',
+], hints:['dicionário organizado por classe', 'rio: substantivo × verbo', 'sem POS, não sabe qual entrada', 'POS primeiro, dicionário depois']},
+{id:'e1c', star:true, mod:1, q:'Pegue a frase "Os gatos pretos comeram rapidamente os peixinhos do aquário" e explique, passo a passo, o que aconteceria em cada etapa: tokenização, remoção de stopwords e lematização.', points:[
+  'Tokenização por palavra: separa em tokens — "Os", "gatos", "pretos", "comeram", "rapidamente", "os", "peixinhos", "do", "aquário"',
+  'Remoção de stopwords: tira palavras de baixo valor informativo como "Os", "os", "do" — sobra "gatos", "pretos", "comeram", "rapidamente", "peixinhos", "aquário"',
+  'Cuidado: remover stopwords é seguro aqui porque não há negação; numa frase como "não gostei", remover "não" inverteria o sentido',
+  'Lematização precisa primeiro da classe gramatical (POS) de cada palavra: "gatos" (substantivo) → "gato"; "pretos" (adjetivo) → "preto"; "comeram" (verbo) → "comer"; "peixinhos" (substantivo, diminutivo) → "peixe"',
+  'Resultado final lematizado: "gato preto comer rapidamente peixe aquário" — plural e tempo verbal desaparecem, mas a palavra continua reconhecível no dicionário',
+], hints:['separar em tokens primeiro', 'tirar palavras de baixo valor', 'cuidado com negação', 'POS antes do lema']},
+{id:'e2a', star:true, mod:2, q:'Explique por que o pipeline do spaCy é descrito como uma "linha de montagem", e como isso difere da abordagem do NLTK.', points:[
+  'O tokenizador roda primeiro, aplicando regras e listas de exceção',
+  'Cada componente seguinte (POS, parser de dependências, lematizador, NER) recebe o Doc já processado pelos anteriores',
+  'Componentes reaproveitam anotações já feitas — ex. o lematizador usa o POS já calculado',
+  'NLTK trata cada etapa como uma chamada isolada e independente, sem esse encadeamento automático',
+  'spaCy é "opinativo" (uma solução por tarefa); NLTK é flexível (múltiplas soluções possíveis)',
+], hints:['pipeline sequencial', 'reaproveita anotação', 'Doc compartilhado', 'opinativo × flexível']},
+{id:'e2b', mod:2, q:'Explique como um parser de dependências sintáticas constrói a árvore de uma frase.', points:[
+  'Não segue uma gramática de regras fixas — é um modelo treinado',
+  'Processa a frase token a token, geralmente da esquerda para a direita',
+  'A cada passo, decide entre poucas ações possíveis (empilhar a próxima palavra, ligá-la como dependente, etc.)',
+  'A árvore inteira emerge dessa sequência de decisões locais',
+  'O processo termina quando resta apenas a raiz (ROOT) da frase',
+], hints:['modelo treinado, não regras', 'decisões passo a passo', 'empilhar ou ligar como dependente', 'raiz (ROOT)']},
+{id:'e3a', star:true, mod:3, q:'Explique a diferença entre a visão "micro" e "macro" na comparação de textos, e como a distância de Levenshtein é calculada.', points:[
+  'Visão micro opera em nível de caractere (ex. Levenshtein) — útil para correção ortográfica ou OCR',
+  'Visão macro opera em nível de termo/significado (ex. cosseno, Jaccard) — útil para busca e recomendação',
+  'Levenshtein usa programação dinâmica: uma tabela onde cada célula depende de três vizinhas já resolvidas',
+  'Cada célula escolhe o mínimo entre inserir, remover ou substituir um caractere',
+  'O algoritmo nunca recalcula o mesmo subproblema duas vezes',
+], hints:['nível caractere × nível termo', 'tabela de programação dinâmica', 'mínimo entre 3 operações', 'subproblemas já resolvidos']},
+{id:'e3b', star:true, mod:3, q:'Explique por que a similaridade de cosseno é mais robusta que a distância Euclidiana para comparar documentos de tamanhos diferentes.', points:[
+  'Cosseno mede o ângulo entre vetores — ou seja, a direção, não a magnitude',
+  'Distância Euclidiana é sensível ao comprimento do vetor (tamanho do documento)',
+  'Um texto repetido duas vezes muda a magnitude do vetor, mas não muda sua direção',
+  'Por isso dois documentos proporcionalmente iguais, mas de tamanhos diferentes, têm cosseno igual a 1',
+], hints:['ângulo × magnitude', 'direção do vetor', 'tamanho do documento', 'texto repetido duas vezes']},
+{id:'e3c', star:true, mod:3, q:'Considere as frases A = "o gato correu rápido" e B = "o gato correu devagar". Calcule a distância de Levenshtein (em nível de palavra), a similaridade de Jaccard, e explique qualitativamente por que o cosseno entre elas seria alto.', points:[
+  'Em nível de palavra, A e B têm 4 tokens cada; só a última palavra muda ("rápido" → "devagar") — Levenshtein = 1 (uma substituição)',
+  'Jaccard: conjunto A = {o, gato, correu, rápido}, conjunto B = {o, gato, correu, devagar} — interseção tem 3 termos, união tem 5 termos → Jaccard = 3/5 = 0,6',
+  'Cosseno: os vetores de contagem de A e B compartilham 3 das 4 dimensões não-nulas com peso igual — o ângulo entre eles é pequeno, logo cosseno próximo de 1',
+  'Vantagem de Levenshtein aqui: captura que é só 1 troca pontual; desvantagem: trata qualquer troca de palavra como o mesmo custo 1, não importa o quão diferente seja o sentido',
+  'Vantagem de Jaccard/cosseno: refletem bem a sobreposição de vocabulário; desvantagem: nenhuma das duas métricas percebe que "rápido" e "devagar" são antônimos — para elas, a frase é só "3 de 4 palavras iguais"',
+], hints:['Levenshtein em nível de palavra = 1', 'Jaccard = interseção/união = 0,6', 'cosseno alto = vetores parecidos', 'nenhuma métrica entende antônimos']},
+{id:'e4a', star:true, mod:4, q:'Explique como a suposição de Markov torna viável estimar probabilidades de sequências de palavras, e qual o papel da suavização (smoothing) nesse processo.', points:[
+  'A suposição de Markov aproxima o contexto completo pelas últimas N−1 palavras',
+  'Isso evita exigir estatísticas de frases inteiras, que seriam raras ou inexistentes no corpus',
+  'A probabilidade de cada n-grama é estimada por contagem direta (MLE) no corpus de treino',
+  'Suavização resolve o "problema dos zeros": sequências nunca vistas no treino não podem ter probabilidade zero',
+  'Laplace, por exemplo, "rouba" uma fatia de probabilidade dos eventos observados e redistribui para os não observados',
+], hints:['contexto reduzido a N-1', 'contagem direta (MLE)', 'problema dos zeros', 'redistribuir probabilidade']},
+{id:'e4b', mod:4, q:'Explique por que aumentar demais o valor de N num modelo de n-gramas pode piorar a capacidade de generalização do modelo.', points:[
+  'A esparsidade cresce rapidamente (como |V|^N) conforme N aumenta',
+  'Com N muito alto, cada sequência específica aparece poucas vezes (ou nenhuma) no treino',
+  'O modelo passa a "copiar" trechos inteiros do corpus em vez de generalizar padrões',
+  'Existe um trade-off entre mais contexto (bom) e mais esparsidade (ruim)',
+], hints:['esparsidade |V|^N', 'sequências raras no treino', 'memorizar × generalizar', 'trade-off de contexto']},
+{id:'e5a', mod:5, q:'Explique o mecanismo completo de uma busca por relevância usando TF-IDF, desde a indexação até o ranqueamento dos resultados.', points:[
+  'Indexação (offline): o corpus inteiro vira uma matriz TF-IDF, com o IDF de cada termo "travado" a partir daí',
+  'A consulta do usuário é projetada no mesmo espaço vetorial, usando os pesos de IDF já aprendidos (nunca recalculados)',
+  'O vetorizador é só transformado (transform) na consulta, nunca re-ajustado (fit)',
+  'Cada documento é ranqueado pela similaridade de cosseno entre seu vetor e o vetor da consulta',
+  'Com normalização L2, o produto escalar entre os vetores já é diretamente essa similaridade de cosseno',
+], hints:['indexar uma vez', 'fit só no treino, transform na busca', 'cosseno na consulta', 'normalização L2']},
+{id:'e5b', star:true, mod:5, q:'Explique por que o TF-IDF consegue "substituir" uma lista manual de stopwords, e qual limitação ainda resta nesse método.', points:[
+  'O IDF pondera a frequência local de um termo pela sua raridade no corpus inteiro',
+  'Um termo presente em todos os documentos recebe IDF baixo (ou zero) e perde peso automaticamente',
+  'Isso dispensa a necessidade de montar uma lista fixa de stopwords à mão',
+  'Limitação que resta: TF-IDF ainda é correspondência exata de termos — sinônimos como "carro" e "automóvel" continuam com similaridade zero entre si',
+], hints:['IDF baixo = peso baixo', 'raridade estatística automática', 'sem lista manual', 'ainda é match exato']},
+{id:'e5c', star:true, mod:5, q:'Monte à mão a matriz Bag of Words para os documentos D1 = "o cão late" e D2 = "o gato mia", e explique como ela fica.', points:[
+  'Vocabulário (união de termos únicos, em ordem alfabética): cão, gato, late, mia, o',
+  'Cada linha é um documento, cada coluna é um termo do vocabulário',
+  'D1 = "o cão late" → [cão:1, gato:0, late:1, mia:0, o:1]',
+  'D2 = "o gato mia" → [cão:0, gato:1, late:0, mia:1, o:1]',
+  'A matriz final é 2 linhas × 5 colunas, já esparsa mesmo nesse exemplo minúsculo — em corpora reais a esparsidade é extrema',
+  'Essa matriz ainda não distingue "o" (muito comum, pouco informativo) de "cão"/"gato" (mais específicos) — é exatamente essa limitação que o TF-IDF resolve, ponderando pela raridade (IDF)',
+], hints:['vocabulário = união de termos únicos', 'linha=documento, coluna=termo', 'conte presença por célula', 'BoW não pondera por raridade']},
+{id:'e6a', star:true, mod:6, q:'Explique como o Word2Vec aprende embeddings através de uma "tarefa descartável", e por que operações como "rei − homem + mulher ≈ rainha" funcionam.', points:[
+  'A rede é treinada para prever o contexto a partir da palavra central (ou o oposto)',
+  'Essa tarefa de previsão em si é descartável — o que importa é o subproduto do treino',
+  'Os pesos da camada oculta da rede viram a matriz de embeddings',
+  'Para acertar as previsões, a rede é forçada a agrupar palavras que aparecem em contextos parecidos',
+  'Relações consistentes entre muitos pares de palavras (ex. gênero) viram direções estáveis e reutilizáveis no espaço vetorial',
+], hints:['tarefa só como pretexto', 'pesos da camada oculta', 'contextos parecidos se agrupam', 'direção = relação semântica']},
+{id:'e6b', star:true, mod:6, q:'Explique a diferença entre CBOW e Skip-gram, e como o tamanho da janela de contexto afeta o tipo de relação capturada entre palavras.', points:[
+  'CBOW prevê a palavra central a partir da média do contexto — mais rápido, melhor para palavras frequentes',
+  'Skip-gram prevê o contexto a partir da palavra central — mais lento, melhor para palavras raras',
+  'Janela de contexto pequena tende a capturar vizinhos sintáticos (mesma função gramatical) — útil, por exemplo, pra um sistema de POS tagging ou correção gramatical',
+  'Janela de contexto grande tende a capturar vizinhos temáticos (mesmo assunto) — útil, por exemplo, pra um sistema de recomendação de artigos pelo tema',
+], hints:['contexto→palavra × palavra→contexto', 'rápido × melhor p/ raras', 'janela pequena = sintaxe', 'janela grande = tema']},
+{id:'e7a', star:true, mod:7, q:'Explique o que é vazamento de dados (data leakage) num pipeline de classificação de texto, e por que ele produz métricas enganosamente otimistas.', points:[
+  'Ocorre quando informação do conjunto de teste influencia o treino de alguma forma',
+  'Exemplo clássico: ajustar (fit) o vetorizador sobre todos os dados antes de separar treino e teste',
+  'O vocabulário e os pesos aprendidos "veem" informação que não deveriam ver antes da avaliação',
+  'Isso faz o modelo parecer melhor do que realmente é em dados totalmente novos',
+  'A correção é usar fit_transform só no conjunto de treino, e transform (sem fit) no teste',
+], hints:['teste vaza pro treino', 'fit em tudo antes do split', 'métrica otimista demais', 'fit só no treino']},
+{id:'e7b', star:true, mod:7, q:'Explique por que a acurácia sozinha pode ser uma métrica enganosa em problemas de classificação com classes desbalanceadas.', points:[
+  'Quando uma classe é muito mais frequente que a outra, prever sempre a classe majoritária já gera acurácia alta',
+  'Isso não reflete o desempenho real do modelo na classe minoritária, que costuma ser a mais importante',
+  'Precisão e recall avaliam separadamente os dois tipos de erro possíveis',
+  'F1 equilibra precisão e recall numa única métrica, evitando que um deles sozinho engane',
+], hints:['classe majoritária domina', 'classe minoritária ignorada', 'precisão × recall', 'F1 equilibra']},
+{id:'e7c', star:true, mod:7, q:'Explique, passo a passo, como você construiria do zero um classificador de reviews de produtos em positivo/negativo.', points:[
+  '1) Coletar um corpus rotulado de reviews, já marcados como positivo/negativo (ou usar as estrelas como proxy de rótulo)',
+  '2) Pré-processar: tokenizar e normalizar (stemming ou lematização); remover stopwords com cautela, nunca palavras de negação como "não"',
+  '3) Dividir em treino e teste ANTES de vetorizar, de preferência com stratify=y para manter a proporção de classes nos dois conjuntos',
+  '4) Vetorizar: fit_transform do vetorizador (BoW ou TF-IDF) só no treino; no teste, usar apenas transform, nunca fit de novo',
+  '5) Treinar um classificador (Naive Bayes ou regressão logística) sobre os vetores de treino',
+  '6) Avaliar no teste com precisão, recall e F1 — não só acurácia, porque reviews positivas e negativas raramente estão perfeitamente balanceadas',
+  '7) Se o desempenho for ruim numa classe, investigar: faltam dados dessa classe? O pré-processamento apagou informação importante, como a negação?',
+], hints:['coletar corpus rotulado', 'split antes de vetorizar', 'fit só no treino', 'avaliar com F1, não só acurácia']},
+{id:'e8a', star:true, mod:8, q:'Explique o mecanismo de self-attention passo a passo, incluindo o papel de Query, Key e Value.', points:[
+  'Cada token gera três vetores por meio de projeções lineares aprendidas: Query, Key e Value',
+  'O vetor Query de um token é comparado (produto escalar) com a Key de todos os outros tokens da frase',
+  'Esses scores passam por um softmax, virando pesos de atenção que somam 1',
+  'A nova representação do token é a soma dos vetores Value de todos os tokens, ponderada por esses pesos',
+  'Isso permite que cada token "escute" mais os tokens realmente relevantes para seu sentido, e menos os irrelevantes',
+], hints:['Query busca, Key oferece', 'produto escalar + softmax', 'soma ponderada de Values', 'token escuta o relevante']},
+{id:'e8b', star:true, mod:8, q:'Explique a diferença fundamental entre BERT e GPT em termos de arquitetura e do tipo de pré-treino usado.', points:[
+  'BERT usa apenas o Encoder do Transformer; é bidirecional (lê os dois lados do contexto ao mesmo tempo)',
+  'O pré-treino do BERT é via Masked Language Model: mascara palavras e as prevê usando contexto dos dois lados',
+  'GPT usa apenas o Decoder do Transformer; é unidirecional, com máscara causal (só enxerga o passado)',
+  'O pré-treino do GPT é prever o próximo token, dado tudo que veio antes',
+  'BERT é voltado a entendimento/classificação; GPT é voltado a geração de texto',
+], hints:['Encoder bidirecional', 'Decoder causal/unidirecional', 'Masked LM × prever próximo token', 'entender × gerar']},
+{id:'e8c', star:true, mod:8, q:'Explique, do começo ao fim, o que acontece com uma frase ao passar por uma camada do Transformer — da entrada até a saída.', points:[
+  'Cada palavra vira um embedding, somado a um positional encoding — necessário porque a atenção sozinha trata a frase como um conjunto, sem noção de ordem',
+  'Esses vetores passam por self-attention: cada token gera Query, Key e Value e "escuta" os outros tokens relevantes — tudo isso em paralelo para todos os tokens, não um de cada vez',
+  'Usa-se multi-head attention: várias cabeças em paralelo, cada uma podendo focar um tipo diferente de relação (ex. concordância verbal numa, correferência de pronome em outra)',
+  'Depois da atenção, cada posição passa por uma camada feed-forward (a mesma para todas as posições), com conexão residual e normalização para estabilizar o treino',
+  'Essas camadas se empilham várias vezes, cada uma refinando a representação da anterior',
+  'No Encoder isso roda de forma bidirecional (BERT); no Decoder roda com máscara causal — só enxerga o passado — e gera um token de cada vez (GPT)',
+], hints:['embedding + positional encoding', 'self-attention em paralelo, não sequencial', 'multi-head = várias relações ao mesmo tempo', 'feed-forward + residual, depois empilha camadas']},
+{id:'e9a', mod:9, q:'Explique como um sistema de RAG (Retrieval-Augmented Generation) funciona na prática, do momento em que o usuário faz uma pergunta até a resposta final.', points:[
+  'Antes da pergunta: documentos são divididos em trechos, e cada trecho vira um vetor de embedding guardado numa base vetorial',
+  'Quando a pergunta chega, ela também é convertida num embedding',
+  'Esse embedding é usado para buscar os trechos mais próximos por similaridade de cosseno',
+  'Os trechos recuperados são inseridos no prompt, antes da pergunta original',
+  'O modelo gera a resposta "ancorado" nesse texto extra — ele não sabia o conteúdo de antemão, só leu como parte do prompt',
+], hints:['trechos viram embeddings', 'busca por cosseno', 'insere no prompt', 'modelo não sabia antes']},
+{id:'e9b', mod:9, q:'Explique a diferença de mecanismo entre RLHF e DPO no ajuste de preferência de um LLM.', points:[
+  'RLHF treina primeiro um modelo de recompensa separado, a partir de comparações feitas por humanos',
+  'Depois, usa aprendizado por reforço (RL, tipicamente PPO) para ajustar o LLM maximizando essa recompensa',
+  'DPO elimina o modelo de recompensa separado',
+  'DPO ajusta os pesos do LLM diretamente sobre pares (resposta preferida, resposta rejeitada), como um treino supervisionado comum',
+  'DPO é mais simples de implementar; RLHF é mais estabelecido, porém mais complexo',
+], hints:['modelo de recompensa', 'RL/PPO ajusta depois', 'DPO sem recompensa separada', 'pares preferida/rejeitada']},
+{id:'e9c', star:true, mod:9, q:'Explique o que é cross-attention e por que ela é necessária numa arquitetura Transformer encoder-decoder completa (ex. tradução automática).', points:[
+  'Self-attention (dentro do encoder, ou dentro do decoder) relaciona tokens de uma mesma sequência entre si',
+  'Cross-attention relaciona duas sequências diferentes: a saída do encoder (frase de origem) e o que o decoder já gerou até agora',
+  'Nela, o vetor Query vem do decoder; os vetores Key e Value vêm da saída do encoder',
+  'Isso permite que, a cada palavra gerada na tradução, o decoder "olhe de volta" para as partes mais relevantes da frase original',
+  'Sem cross-attention, o decoder só enxergaria o que ele mesmo já gerou, perdendo a ligação direta com a frase de entrada',
+], hints:['self-attention: mesma sequência', 'cross-attention: duas sequências', 'Query do decoder, K/V do encoder', 'decoder olha de volta pro encoder']},
+];
+
+/* ================= persistence ================= */
+const LS_KEY = 'treino-modelo-stats-v1';
+function loadStats(){
+  const fallback = {wrong:{}, highScore:0, bestStreak:0, bestAcc:0, essayPointMiss:{}};
+  try{
+    const s = JSON.parse(localStorage.getItem(LS_KEY)) || fallback;
+    if(!s.essayPointMiss) s.essayPointMiss = {};
+    return s;
+  }catch(e){ return fallback; }
+}
+function saveStats(s){ try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch(e){} }
+let stats = loadStats();
+
+/* ================= scope: Pauta da Prova only ================= */
+const PAUTA_KEY = 'treino-modelo-pautaOnly';
+let pautaOnly = (function(){
+  try{ const v = localStorage.getItem(PAUTA_KEY); return v===null ? true : v==='1'; }catch(e){ return true; }
+})();
+function savePautaOnly(){ try{ localStorage.setItem(PAUTA_KEY, pautaOnly?'1':'0'); }catch(e){} }
+function quizPool(){ return pautaOnly ? QUESTIONS.filter(q=>q.star) : QUESTIONS; }
+function essayPool(){ return pautaOnly ? ESSAY_PROMPTS.filter(p=>p.star) : ESSAY_PROMPTS; }
+
+function renderScopeNotes(){
+  const rushN = quizPool().length, essayN = essayPool().length;
+  document.getElementById('rushScope').textContent = pautaOnly ? '⭐ só Pauta da Prova ('+rushN+' perguntas)' : 'todos os módulos ('+rushN+' perguntas)';
+  document.getElementById('reviewScope').textContent = pautaOnly ? '⭐ só temas da Pauta, por módulo' : 'todas as perguntas do módulo';
+  document.getElementById('essayScope').textContent = pautaOnly ? '⭐ só Pauta da Prova ('+essayN+' dissertações)' : 'todos os módulos ('+essayN+' dissertações)';
+  const allBtn = document.querySelector('#essayCountPicker [data-n="all"]');
+  if(allBtn) allBtn.textContent = 'Todas ('+essayN+')';
+}
+
+/* ================= state ================= */
+let state = null; // current game state
+const RUSH_SIZE = 15;
+const RUSH_TIME = 20;
+const RUSH_LIVES = 5;
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function weightedSample(pool, n){
+  const weighted = pool.map(q => ({q, w: (1 + 2*(stats.wrong[q.id]||0)) * (q.star ? 2 : 1)}));
+  const chosen = [];
+  const left = weighted.slice();
+  n = Math.min(n, left.length);
+  for(let k=0;k<n;k++){
+    const total = left.reduce((s,x)=>s+x.w,0);
+    let r = Math.random()*total;
+    let idx = 0;
+    for(;idx<left.length;idx++){ r -= left[idx].w; if(r<=0) break; }
+    idx = Math.min(idx, left.length-1);
+    chosen.push(left[idx].q);
+    left.splice(idx,1);
+  }
+  return chosen;
+}
+
+function shuffledOptions(q){
+  const idxs = shuffle(q.opts.map((_,i)=>i));
+  return { order: idxs, correctPos: idxs.indexOf(q.c) };
+}
+
+/* ================= screens ================= */
+const screenMenu = document.getElementById('screenMenu');
+const screenGame = document.getElementById('screenGame');
+const screenEnd = document.getElementById('screenEnd');
+const screenEssay = document.getElementById('screenEssay');
+function showScreen(name){
+  screenMenu.hidden = name!=='menu';
+  screenGame.hidden = name!=='game';
+  screenEnd.hidden = name!=='end';
+  screenEssay.hidden = name!=='essay';
+  window.scrollTo({top:0, behavior:'instant' in document.documentElement.style ? 'instant':'auto'});
+}
+
+function renderStatsRow(){
+  const row = document.getElementById('statsRow');
+  row.innerHTML = '';
+  const items = [
+    ['Recorde', stats.highScore+' pts'],
+    ['Melhor combo', '×'+stats.bestStreak],
+    ['Melhor acurácia', stats.bestAcc+'%'],
+  ];
+  items.forEach(([l,v])=>{
+    const d = document.createElement('div');
+    d.className='stat-chip';
+    d.innerHTML = l+': <b>'+v+'</b>';
+    row.appendChild(d);
+  });
+}
+
+function renderModuleGrid(){
+  const grid = document.getElementById('moduleGrid');
+  grid.innerHTML = '';
+  const pool = quizPool();
+  Object.keys(MODULES).forEach(num=>{
+    const n = parseInt(num,10);
+    const count = pool.filter(q=>q.mod===n).length;
+    const btn = document.createElement('div');
+    btn.className = 'module-pill';
+    btn.innerHTML = '<span class="n">M'+num+'</span>'+MODULES[num]+'<span class="cnt">'+count+' pergunta'+(count===1?'':'s')+'</span>';
+    btn.addEventListener('click', ()=> startGame('review', n));
+    grid.appendChild(btn);
+  });
+}
+
+document.getElementById('btnRush').addEventListener('click', ()=> startGame('rush'));
+document.getElementById('btnReview').addEventListener('click', ()=>{
+  const grid = document.getElementById('moduleGrid');
+  grid.hidden = !grid.hidden;
+});
+document.getElementById('btnEssay').addEventListener('click', ()=>{
+  const picker = document.getElementById('essayCountPicker');
+  picker.hidden = !picker.hidden;
+});
+document.querySelectorAll('#essayCountPicker [data-n]').forEach(b=>{
+  b.addEventListener('click', ()=> startEssayMode(b.dataset.n==='all' ? essayPool().length : parseInt(b.dataset.n,10)));
+});
+document.getElementById('pautaToggle').addEventListener('change', (e)=>{
+  pautaOnly = e.target.checked;
+  savePautaOnly();
+  renderModuleGrid();
+  renderScopeNotes();
+});
+
+/* ================= essay / dissertative mode ================= */
+let essayState = null;
+
+function startEssayMode(count){
+  const pool = essayPool();
+  count = Math.min(count || pool.length, pool.length);
+  const queue = weightedSample(pool, count);
+  essayState = { queue, i:0, results:[] };
+  document.getElementById('essaySummary').hidden = true;
+  document.getElementById('essayWrite').hidden = false;
+  showScreen('essay');
+  renderEssayPrompt();
+}
+
+const ESSAY_SKELETON = 'O que é / qual problema isso resolve:\n\n\nComo funciona, passo a passo:\n1. \n2. \n3. \n\nPor que isso importa (consequência, exemplo ou o que daria errado sem isso):\n';
+
+function renderEssayPrompt(){
+  const item = essayState.queue[essayState.i];
+  document.getElementById('essayModTag').textContent = (item.star?'⭐ ':'')+'M'+item.mod+' · '+MODULES[item.mod];
+  document.getElementById('essayCounter').textContent = (essayState.i+1)+'/'+essayState.queue.length;
+  document.getElementById('essayPrompt').textContent = item.q;
+  document.getElementById('essayAnswer').value = '';
+  const chipsEl = document.getElementById('hintChips');
+  chipsEl.innerHTML = '';
+  (item.hints||[]).forEach(h=>{
+    const c = document.createElement('span');
+    c.className = 'hint-chip';
+    c.textContent = h;
+    chipsEl.appendChild(c);
+  });
+
+  const mapList = document.getElementById('conceptMapList');
+  mapList.innerHTML = '';
+  item.points.forEach(p=>{
+    const li = document.createElement('li');
+    li.textContent = p;
+    mapList.appendChild(li);
+  });
+  document.getElementById('conceptMap').open = true;
+
+  document.getElementById('rubricCard').hidden = true;
+  document.getElementById('essayWrite').hidden = false;
+  document.getElementById('btnRevealRubric').hidden = false;
+  document.getElementById('essayAnswer').focus();
+}
+
+document.getElementById('btnSkeleton').addEventListener('click', ()=>{
+  const ta = document.getElementById('essayAnswer');
+  if(ta.value.trim().length > 0){
+    if(!confirm('Isso substitui o que você já escreveu por uma estrutura para preencher. Continuar?')) return;
+  }
+  ta.value = ESSAY_SKELETON;
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+});
+
+document.getElementById('btnRevealRubric').addEventListener('click', ()=>{
+  const item = essayState.queue[essayState.i];
+  const list = document.getElementById('rubricList');
+  list.innerHTML = '';
+  item.points.forEach((p, idx)=>{
+    const row = document.createElement('label');
+    row.className = 'rubric-item';
+    row.innerHTML = '<input type="checkbox" class="rubric-chk" data-idx="'+idx+'"><span>'+p+'</span>';
+    list.appendChild(row);
+  });
+  const note = document.getElementById('coverageNote');
+  note.textContent = '';
+  function updateNote(){
+    const checks = Array.from(document.querySelectorAll('.rubric-chk'));
+    const covered = checks.filter(c=>c.checked).length;
+    note.textContent = 'Cobertura marcada: '+covered+' / '+checks.length+' pontos';
+  }
+  list.querySelectorAll('.rubric-chk').forEach(chk=> chk.addEventListener('change', updateNote));
+  updateNote();
+  document.getElementById('rubricCard').hidden = false;
+  document.getElementById('btnRevealRubric').hidden = true;
+});
+
+document.getElementById('btnNextEssay').addEventListener('click', ()=>{
+  const item = essayState.queue[essayState.i];
+  const checks = Array.from(document.querySelectorAll('.rubric-chk'));
+  const covered = checks.filter(c=>c.checked).length;
+  const missed = checks.length - covered;
+  essayState.results.push({item, covered, total: checks.length});
+
+  if(missed>0){
+    stats.wrong[item.id] = (stats.wrong[item.id]||0) + missed;
+    checks.forEach(chk=>{
+      if(!chk.checked){
+        const key = item.id+'#'+chk.dataset.idx;
+        stats.essayPointMiss[key] = (stats.essayPointMiss[key]||0) + 1;
+      }
+    });
+    saveStats(stats);
+  }
+
+  essayState.i++;
+  if(essayState.i >= essayState.queue.length){ endEssay(); return; }
+  renderEssayPrompt();
+});
+
+function endEssay(){
+  const results = essayState.results;
+  const totalCovered = results.reduce((s,r)=>s+r.covered,0);
+  const totalPoints = results.reduce((s,r)=>s+r.total,0);
+  const pct = totalPoints ? Math.round(100*totalCovered/totalPoints) : 0;
+
+  document.getElementById('essayWrite').hidden = true;
+  document.getElementById('rubricCard').hidden = true;
+
+  const weak = results.filter(r => r.total>0 && r.covered/r.total < 0.6);
+  const body = document.getElementById('essaySummaryBody');
+  body.innerHTML = '<div class="essay-sum-item card"><span class="v">'+pct+'%</span>cobertura média dos pontos-chave, em '+results.length+' dissertações praticadas.</div>';
+  if(weak.length){
+    const d = document.createElement('div');
+    d.className = 'essay-sum-item card';
+    d.innerHTML = '<b>Reforce estes temas:</b><br>'+weak.map(r=>'M'+r.item.mod+' · '+r.item.q+' <span style="color:var(--muted)">('+r.covered+'/'+r.total+')</span>').join('<br><br>');
+    body.appendChild(d);
+  } else {
+    const d = document.createElement('div');
+    d.className = 'essay-sum-item card';
+    d.textContent = 'Boa cobertura em todos os temas praticados — mantenha o ritmo.';
+    body.appendChild(d);
+  }
+
+  const missEntries = Object.entries(stats.essayPointMiss || {}).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(missEntries.length){
+    const d = document.createElement('div');
+    d.className = 'essay-sum-item card';
+    const rows = missEntries.map(([key, count])=>{
+      const [promptId, idxStr] = key.split('#');
+      const prompt = ESSAY_PROMPTS.find(p=>p.id===promptId);
+      if(!prompt) return null;
+      const text = prompt.points[parseInt(idxStr,10)];
+      if(!text) return null;
+      return 'M'+prompt.mod+' · '+text+' <span style="color:var(--muted)">(esquecido '+count+'x)</span>';
+    }).filter(Boolean);
+    d.innerHTML = '<b>Detalhes que você mais costuma esquecer (histórico):</b><br>'+rows.join('<br><br>');
+    body.appendChild(d);
+  }
+
+  document.getElementById('essaySummary').hidden = false;
+}
+
+document.getElementById('btnEssayAgain').addEventListener('click', ()=> startEssayMode(essayState.queue.length));
+document.getElementById('btnEssayMenu').addEventListener('click', ()=>{
+  renderStatsRow();
+  showScreen('menu');
+});
+
+/* ================= game logic ================= */
+function startGame(mode, moduleNum, customQueue){
+  let queue;
+  if(customQueue){
+    queue = customQueue;
+  } else if(mode==='rush'){
+    queue = weightedSample(quizPool(), RUSH_SIZE);
+  } else {
+    queue = shuffle(quizPool().filter(q=>q.mod===moduleNum));
+  }
+
+  state = {
+    mode, moduleNum, queue, i:0,
+    lives: mode==='rush' ? RUSH_LIVES : Infinity,
+    streak:0, bestStreak:0, score:0,
+    losses:[], accSeries:[], correctCount:0, answered:0,
+    missed:[], timer:null, timeLeft:RUSH_TIME, answeredThis:false,
+  };
+  showScreen('game');
+  renderHud();
+  renderQuestion();
+}
+
+function livesHtml(){
+  if(state.lives===Infinity) return '';
+  let s='';
+  for(let i=0;i<RUSH_LIVES;i++){ s += '<span class="'+(i<state.lives?'':'lost')+'">⚙️</span>'; }
+  return s;
+}
+
+function renderHud(){
+  document.getElementById('hudEpoch').textContent = (state.i+1)+'/'+state.queue.length;
+  const avgLoss = state.losses.length ? (state.losses.reduce((a,b)=>a+b,0)/state.losses.length) : Math.log(4);
+  document.getElementById('hudLoss').textContent = avgLoss.toFixed(2);
+  const acc = state.answered ? Math.round(100*state.correctCount/state.answered) : 0;
+  document.getElementById('hudAcc').textContent = acc+'%';
+  document.getElementById('hudStreak').textContent = '×'+(1+Math.min(state.streak,4));
+  document.getElementById('hudLives').innerHTML = livesHtml();
+  document.getElementById('timerWrap').classList.toggle('hidden', state.mode!=='rush');
+}
+
+function renderConceptStep(step){
+  clearInterval(state.timer);
+  document.getElementById('qModTag').textContent = 'M'+step.mod+' · '+MODULES[step.mod];
+  document.getElementById('qCounter').textContent = 'revisão de tema';
+  const qt = document.getElementById('qText');
+  qt.innerHTML = MODULE_RECAP[step.mod];
+  qt.classList.add('concept');
+  document.getElementById('qOptions').innerHTML = '';
+  document.getElementById('feedback').hidden = true;
+  const btn = document.getElementById('btnNext');
+  btn.textContent = 'Entendi, praticar →';
+  btn.hidden = false;
+  renderHud();
+}
+
+function renderQuestion(){
+  clearInterval(state.timer);
+  state.answeredThis = false;
+  const q = state.queue[state.i];
+
+  if(q.kind==='concept'){
+    renderConceptStep(q);
+    return;
+  }
+  document.getElementById('qText').classList.remove('concept');
+
+  const {order, correctPos} = shuffledOptions(q);
+  state.currentOrder = order;
+  state.currentCorrectPos = correctPos;
+
+  document.getElementById('qModTag').textContent = (q.star?'⭐ ':'')+'M'+q.mod+' · '+MODULES[q.mod];
+  document.getElementById('qCounter').textContent = (state.i+1)+' / '+state.queue.length;
+  document.getElementById('qText').textContent = q.q;
+
+  const optsEl = document.getElementById('qOptions');
+  optsEl.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  order.forEach((origIdx, pos)=>{
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = '<span class="k">'+letters[pos]+'</span>'+q.opts[origIdx];
+    b.addEventListener('click', ()=> answer(pos));
+    optsEl.appendChild(b);
+  });
+
+  document.getElementById('feedback').hidden = true;
+  document.getElementById('btnNext').hidden = true;
+  renderHud();
+
+  if(state.mode==='rush'){
+    state.timeLeft = RUSH_TIME;
+    updateTimerBar();
+    state.timer = setInterval(()=>{
+      state.timeLeft -= 1;
+      updateTimerBar();
+      if(state.timeLeft<=0){ clearInterval(state.timer); answer(-1); }
+    }, 1000);
+  }
+}
+
+function updateTimerBar(){
+  const fill = document.getElementById('timerFill');
+  const pct = Math.max(0, state.timeLeft/RUSH_TIME*100);
+  fill.style.width = pct+'%';
+  fill.style.background = pct>50 ? 'var(--accent)' : pct>20 ? 'var(--warn)' : 'var(--danger)';
+}
+
+function answer(pos){
+  if(state.answeredThis) return;
+  state.answeredThis = true;
+  clearInterval(state.timer);
+
+  const q = state.queue[state.i];
+  const isCorrect = pos === state.currentCorrectPos;
+  const opts = Array.from(document.querySelectorAll('#qOptions .opt'));
+  opts.forEach(b=> b.disabled = true);
+
+  if(pos>=0) opts[pos].classList.add(isCorrect?'correct':'wrong');
+  opts[state.currentCorrectPos].classList.add('correct');
+  if(pos>=0 && !isCorrect) opts[pos].classList.add('shake');
+
+  let prob;
+  if(isCorrect){
+    const timeFrac = state.mode==='rush' ? (state.timeLeft/RUSH_TIME) : 1;
+    prob = 0.45 + 0.5*timeFrac;
+    state.correctCount++;
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    const mult = 1+Math.min(state.streak-1,4);
+    state.score += Math.round(100*mult*(0.6+0.4*timeFrac));
+  } else {
+    prob = 0.05;
+    state.streak = 0;
+    state.missed.push(q);
+    if(state.mode==='rush'){ state.lives -= 1; }
+    stats.wrong[q.id] = (stats.wrong[q.id]||0)+1;
+    saveStats(stats);
+  }
+  const loss = -Math.log(prob);
+  state.losses.push(loss);
+  state.answered++;
+  state.accSeries.push(Math.round(100*state.correctCount/state.answered));
+
+  const fb = document.getElementById('feedback');
+  fb.hidden = false;
+  fb.className = 'feedback ' + (isCorrect?'ok':'bad');
+  document.getElementById('fbTag').textContent = isCorrect ? (pos===-1?'TEMPO':'CERTO') : (pos===-1?'TEMPO':'ERRADO');
+  document.getElementById('fbText').innerHTML = q.exp;
+
+  renderHud();
+
+  const gameOver = state.mode==='rush' && state.lives<=0;
+  const lastQuestion = state.i >= state.queue.length-1;
+
+  if(gameOver || lastQuestion){
+    document.getElementById('btnNext').textContent = gameOver ? 'Ver resultado (treino divergiu)' : 'Ver resultado →';
+  } else {
+    document.getElementById('btnNext').textContent = 'Próxima →';
+  }
+  document.getElementById('btnNext').hidden = false;
+}
+
+document.getElementById('btnNext').addEventListener('click', ()=>{
+  const current = state.queue[state.i];
+  if(current && current.kind==='concept'){
+    state.i++;
+    renderQuestion();
+    return;
+  }
+  const gameOver = state.mode==='rush' && state.lives<=0;
+  const lastQuestion = state.i >= state.queue.length-1;
+  if(gameOver || lastQuestion){ endGame(); return; }
+  state.i++;
+  renderQuestion();
+});
+
+/* ================= end screen ================= */
+function endGame(){
+  clearInterval(state.timer);
+  const acc = state.answered ? Math.round(100*state.correctCount/state.answered) : 0;
+  const avgLoss = state.losses.length ? state.losses.reduce((a,b)=>a+b,0)/state.losses.length : 0;
+  const diverged = state.mode==='rush' && state.lives<=0;
+
+  stats.highScore = Math.max(stats.highScore, state.score);
+  stats.bestStreak = Math.max(stats.bestStreak, state.bestStreak);
+  stats.bestAcc = Math.max(stats.bestAcc, acc);
+  saveStats(stats);
+
+  document.getElementById('endEyebrow').textContent = diverged ? 'o treinamento divergiu' : (state.mode==='theme' ? 'revisão de temas concluída' : 'treino concluído');
+  document.getElementById('endAcc').textContent = acc+'%';
+  document.getElementById('endAcc').style.color = diverged ? 'var(--danger)' : 'var(--accent)';
+  document.getElementById('endTag').textContent = diverged
+    ? RUSH_LIVES+' gradientes explodiram antes do fim — reveja os pontos abaixo'
+    : 'de acurácia final · '+state.answered+' questões respondidas';
+  document.getElementById('endScore').textContent = state.score;
+  document.getElementById('endStreak').textContent = '×'+state.bestStreak;
+  document.getElementById('endLoss').textContent = avgLoss.toFixed(2);
+
+  const missList = document.getElementById('missList');
+  const missBlock = document.getElementById('missBlock');
+  missList.innerHTML = '';
+  if(state.missed.length===0){
+    missBlock.hidden = true;
+  } else {
+    missBlock.hidden = false;
+    state.missed.forEach(q=>{
+      const d = document.createElement('div');
+      d.className = 'card miss-item';
+      d.innerHTML = '<div class="q">M'+q.mod+' · '+q.q+'</div><div class="right">✓ '+q.opts[q.c]+'</div><div style="color:var(--muted); margin-top:4px;">'+q.exp+'</div>';
+      missList.appendChild(d);
+    });
+  }
+  document.getElementById('btnReplayMissed').hidden = state.missed.length===0;
+
+  showScreen('end');
+  renderStatsRow();
+
+  requestAnimationFrame(()=>{
+    drawLineChart('chartAcc', state.accSeries, {min:0, max:100, color:getCss('--accent'), suffix:'%', baseline:null});
+    drawLineChart('chartLoss', state.losses, {min:0, max:Math.max(3, ...state.losses), color:getCss('--warn'), suffix:'', baseline:Math.log(4)});
+  });
+}
+
+function buildThemeSteps(missedQuestions){
+  const modOrder = [];
+  const seenMods = new Set();
+  missedQuestions.forEach(q=>{
+    if(!seenMods.has(q.mod)){ seenMods.add(q.mod); modOrder.push(q.mod); }
+  });
+
+  const missedIdsByMod = {};
+  missedQuestions.forEach(q=>{
+    if(!missedIdsByMod[q.mod]) missedIdsByMod[q.mod] = new Set();
+    missedIdsByMod[q.mod].add(q.id);
+  });
+
+  const steps = [];
+  modOrder.forEach(mod=>{
+    steps.push({kind:'concept', mod});
+    const pool = QUESTIONS.filter(q=>q.mod===mod);
+    const missedSet = missedIdsByMod[mod];
+    const nonMissed = shuffle(pool.filter(q=>!missedSet.has(q.id)));
+    const missedPool = shuffle(pool.filter(q=>missedSet.has(q.id)));
+    let picks = nonMissed.slice(0,3);
+    if(picks.length<3) picks = picks.concat(missedPool.slice(0, 3-picks.length));
+    if(picks.length<3){
+      const rest = shuffle(pool.filter(q=> !picks.includes(q)));
+      picks = picks.concat(rest.slice(0, 3-picks.length));
+    }
+    picks.forEach(q=> steps.push(q));
+  });
+  return steps;
+}
+
+function startThemeReview(missedQuestions){
+  const steps = buildThemeSteps(missedQuestions);
+  state = {
+    mode:'theme', queue: steps, i:0,
+    lives: Infinity, streak:0, bestStreak:0, score:0,
+    losses:[], accSeries:[], correctCount:0, answered:0,
+    missed:[], timer:null, timeLeft:0, answeredThis:false,
+  };
+  showScreen('game');
+  renderHud();
+  renderQuestion();
+}
+
+document.getElementById('btnReplayMissed').addEventListener('click', ()=>{
+  startThemeReview(state.missed.slice());
+});
+document.getElementById('btnBackMenu').addEventListener('click', ()=>{
+  renderStatsRow();
+  showScreen('menu');
+});
+
+function getCss(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#4FD1A5';
+}
+
+/* ================= tiny line chart w/ hover ================= */
+function drawLineChart(canvasId, series, opts){
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const cssH = parseInt(canvas.getAttribute('height'),10) || 110;
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  canvas.style.height = cssH+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const pad = {l:8, r:8, t:10, b:18};
+  const w = cssW - pad.l - pad.r;
+  const h = cssH - pad.t - pad.b;
+  const border = getCss('--border');
+  const muted = getCss('--muted');
+
+  function draw(hoverIdx){
+    ctx.clearRect(0,0,cssW,cssH);
+    // gridlines
+    ctx.strokeStyle = border; ctx.lineWidth = 1;
+    for(let g=0; g<=2; g++){
+      const y = pad.t + h*g/2;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+w,y); ctx.stroke();
+    }
+    if(!series.length){ return; }
+
+    const n = series.length;
+    const x = i => pad.l + (n===1?0:w*i/(n-1));
+    const y = v => pad.t + h - h*Math.max(0,Math.min(1,(v-opts.min)/(opts.max-opts.min)));
+
+    if(opts.baseline!=null){
+      ctx.strokeStyle = muted; ctx.setLineDash([3,4]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pad.l, y(opts.baseline)); ctx.lineTo(pad.l+w, y(opts.baseline)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.strokeStyle = opts.color; ctx.lineWidth = 2; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath();
+    series.forEach((v,i)=>{ const px=x(i), py=y(v); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+    ctx.stroke();
+
+    // end dot
+    const lastX = x(n-1), lastY = y(series[n-1]);
+    ctx.fillStyle = opts.color;
+    ctx.beginPath(); ctx.arc(lastX,lastY,3.5,0,Math.PI*2); ctx.fill();
+
+    if(hoverIdx!=null && hoverIdx>=0 && hoverIdx<n){
+      const hx = x(hoverIdx), hy = y(series[hoverIdx]);
+      ctx.strokeStyle = muted; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(hx,pad.t); ctx.lineTo(hx,pad.t+h); ctx.stroke();
+      ctx.fillStyle = opts.color;
+      ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2); ctx.fill();
+    }
+  }
+  draw(null);
+
+  let tooltipEl = canvas._tooltipEl;
+  if(!tooltipEl){
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'tooltip';
+    tooltipEl.style.position='absolute';
+    document.body.appendChild(tooltipEl);
+    canvas._tooltipEl = tooltipEl;
+  }
+  tooltipEl.style.display='none';
+
+  canvas.onmousemove = function(e){
+    if(!series.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const n = series.length;
+    const idx = Math.round((n===1?0:(mx-pad.l)/w*(n-1)));
+    const clamped = Math.max(0, Math.min(n-1, idx));
+    draw(clamped);
+    tooltipEl.style.display='block';
+    tooltipEl.style.left = (e.clientX)+'px';
+    tooltipEl.style.top = (e.clientY)+'px';
+    tooltipEl.textContent = '#'+(clamped+1)+' · '+series[clamped].toFixed(2)+opts.suffix;
+  };
+  canvas.onmouseleave = function(){ draw(null); tooltipEl.style.display='none'; };
+}
+
+/* ================= init ================= */
+document.getElementById('pautaToggle').checked = pautaOnly;
+renderModuleGrid();
+renderScopeNotes();
+renderStatsRow();
+showScreen('menu');
+
+})();
+</script>
+</body>
+</html>
