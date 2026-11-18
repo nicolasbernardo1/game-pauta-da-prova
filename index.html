@@ -409,14 +409,14 @@ const MODULES = {
 };
 
 const MODULE_RECAP = {
-  1:'Pré-processamento de texto: regex para limpar e extrair padrões, tokenização (por palavra, sentença ou subpalavra) e a <span class="hl">Lei de Zipf</span> (poucas palavras dominam, cauda longa de palavras raras). <span class="hl">Stemming</span> corta sufixo por regra, sem dicionário; <span class="hl">lematização</span> usa a classe gramatical (POS) + dicionário para achar a forma canônica — os dois são válidos, a escolha depende do objetivo.',
+  1:'Antes de tudo vem a <span class="hl">limpeza bruta</span> (regex remove HTML/URLs/emojis/pontuação e padroniza pra minúsculas). Pré-processamento de texto: regex para limpar e extrair padrões, tokenização (por palavra, sentença ou subpalavra) e a <span class="hl">Lei de Zipf</span> (poucas palavras dominam, cauda longa de palavras raras). <span class="hl">Stemming</span> corta sufixo por regra, sem dicionário; <span class="hl">lematização</span> usa a classe gramatical (POS) + dicionário para achar a forma canônica — os dois são válidos, a escolha depende do objetivo.',
   2:'Na prática, <span class="hl">NLTK</span> (acadêmico, flexível) e <span class="hl">spaCy</span> (industrial, pipeline integrado) resolvem as mesmas tarefas de formas diferentes. O pipeline do spaCy funciona como linha de montagem: cada etapa (tokenizador, POS, dependências, lematizador, NER) <span class="hl-warn">reaproveita a anotação</span> já feita pela etapa anterior no mesmo Doc.',
   3:'Um corpus confiável é autêntico, representativo, vasto, legível por máquina e tem critério de coleta explícito. Para medir semelhança entre textos: <span class="hl">Levenshtein</span> mede edições de caracteres (numa substituição, trocar o caractere custa só <span class="hl-warn">1 edição</span> — mais barato que remover e inserir, que custaria 2), <span class="hl">Jaccard</span> mede sobreposição de conjuntos de termos, e <span class="hl">cosseno</span> mede o ângulo entre vetores — por isso ignora o tamanho do documento, ao contrário da distância Euclidiana.',
   4:'Na essência, um modelo de linguagem serve para <span class="hl">prever a próxima palavra</span> dada as anteriores — ele atribui probabilidade a sequências de palavras. A <span class="hl">suposição de Markov</span> aproxima o contexto completo pelas últimas N−1 palavras, tornando viável estimar probabilidades por contagem direta (MLE). <span class="hl-warn">Suavização</span> (como o add-1 de Laplace) evita que combinações nunca vistas no treino recebam probabilidade zero.',
-  5:'Bag of Words conta palavras mas ignora raridade; <span class="hl">TF-IDF</span> pondera a frequência local pela raridade global (IDF), dispensando uma lista manual de stopwords — termos onipresentes no corpus recebem IDF baixo e perdem peso sozinhos. Com <span class="hl">normalização L2</span>, o produto escalar entre vetores já é diretamente a similaridade de cosseno — a base de qualquer busca por relevância.',
-  6:'<span class="hl">Word2Vec</span> treina uma rede numa tarefa descartável (prever o contexto a partir da palavra, ou vice-versa) só para que os pesos da camada oculta virem os embeddings. CBOW prevê a palavra central a partir do contexto (rápido); Skip-gram faz o oposto (melhor para palavras raras). Relações semânticas viram <span class="hl">direções estáveis</span> no espaço vetorial — é por isso que "rei − homem + mulher ≈ rainha".',
+  5:'Bag of Words conta palavras mas ignora raridade; <span class="hl">TF-IDF</span> pondera a frequência local pela raridade global (IDF), dispensando uma lista manual de stopwords — termos onipresentes no corpus recebem IDF baixo e perdem peso sozinhos. Com <span class="hl">normalização L2</span>, o produto escalar entre vetores já é diretamente a similaridade de cosseno. O <span class="hl">BM25</span> vai além: soma saturação de frequência + normalização pelo tamanho médio do documento — padrão prático em busca e RAG.',
+  6:'<span class="hl">Word2Vec</span> treina uma rede numa tarefa descartável (prever o contexto a partir da palavra, ou vice-versa) só para que os pesos da camada oculta virem os embeddings. CBOW prevê a palavra central a partir do contexto (rápido); Skip-gram faz o oposto (melhor para palavras raras). Relações semânticas viram <span class="hl">direções estáveis</span> no espaço vetorial — é por isso que "rei − homem + mulher ≈ rainha". Limitação: são <span class="hl-warn">embeddings estáticos</span> — "manga" (fruta) e "manga" (camisa) têm o mesmo vetor, não resolvem polissemia.',
   7:'Um pipeline de classificação supervisionada: vetorizar o texto, treinar um classificador (Naive Bayes ou regressão logística) e avaliar com precisão/recall/F1 — nunca só acurácia em dados desbalanceados. Cuidado redobrado com <span class="hl-warn">vazamento de dados</span>: o vetorizador só pode ser ajustado (fit) no conjunto de treino.',
-  8:'<span class="hl">Self-attention</span> (vetores Query, Key e Value por token) resolveu o gargalo de memória que travava RNNs e o Seq2Seq clássico, permitindo paralelismo total no treino. <span class="hl">BERT</span> usa o Encoder do Transformer (bidirecional, entende — o "Leitor"); <span class="hl">GPT</span> usa o Decoder (unidirecional, gera — o "Escritor").',
+  8:'<span class="hl">Self-attention</span> (vetores Query, Key e Value por token; Attention(Q,K,V)=softmax(QKᵀ/√dk)·V) resolveu o gargalo de memória que travava RNNs e o Seq2Seq clássico, permitindo paralelismo total no treino. <span class="hl">BERT</span> usa o Encoder do Transformer (bidirecional, entende — o "Leitor"; pré-treino com MLM + Next Sentence Prediction); <span class="hl">GPT</span> usa o Decoder (unidirecional, gera — o "Escritor").',
   9:'Arquiteturas só-encoder (entendimento), só-decoder (geração) e encoder-decoder (tradução/sumarização) — nesta última, a <span class="hl">cross-attention</span> liga o Decoder à saída do Encoder (Query vem do decoder, Key/Value vêm do encoder), permitindo "olhar de volta" para a frase original a cada palavra gerada. Estratégias de decodificação como temperatura e top-k controlam o quanto a geração é previsível ou criativa. No ecossistema em volta de um LLM: <span class="hl">RAG</span> recupera contexto relevante antes de gerar, <span class="hl">RLHF/DPO</span> ajustam o modelo por preferência humana, e o <span class="hl">MCP</span> conecta o modelo a ferramentas externas.',
 };
 
@@ -458,6 +458,9 @@ const QUESTIONS = [
 {id:'1-12', mod:1, q:'Qual frase resume corretamente a relação entre lexema, raiz e lema?', opts:[
   'Lexema é a unidade abstrata; raiz é o corte sem dicionário; lema é a forma de dicionário','Os três termos são sinônimos perfeitos entre si','A raiz é sempre maior do que o lexema de origem','O lema é sempre idêntico à raiz, exceto em verbos'], c:0,
   exp:'<span class="hl">Lexema</span> agrupa todas as formas (menino, meninos, menina); raiz é o corte cru; lema é a entrada de dicionário.'},
+{id:'1-13', star:true, mod:1, q:'Antes mesmo da tokenização, o que a etapa de "limpeza bruta" do texto costuma fazer?', opts:[
+  'Remove ruídos (HTML, URLs, emojis, pontuação) via regex e padroniza para minúsculas','Já calcula o TF-IDF de cada palavra do texto','Decide a classe gramatical (POS) de cada token','Treina um modelo de linguagem em cima do texto cru'], c:0,
+  exp:'A limpeza bruta usa <span class="hl">regex (re.sub)</span> pra tirar ruído que não carrega sentido — HTML, URLs, emojis, pontuação solta — e padroniza tudo pra minúsculas (<span class="hl-warn">lowercasing</span>), antes mesmo de qualquer tokenização.'},
 
 // ---- M2 ----
 {id:'2-1', star:true, mod:2, q:'Por que o POS tagging padrão do NLTK é inadequado para português?', opts:[
@@ -610,6 +613,9 @@ const QUESTIONS = [
 {id:'5-12', mod:5, q:'O que é o BM25, citado como evolução prática do TF-IDF?', opts:[
   'Uma variação de ranking ainda usada em motores de busca e em pipelines de RAG','Um algoritmo de compressão de imagens para a web','Um tipo de rede neural recorrente bidirecional','Uma métrica para avaliar qualidade de tradução automática'], c:0,
   exp:'<span class="hl">BM25</span> refina a ideia do TF-IDF com ajustes de saturação de frequência, e segue popular em busca e em RAG.'},
+{id:'5-14', star:true, mod:5, q:'Além da saturação da frequência de termos, o que mais o BM25 ajusta em relação ao TF-IDF puro?', opts:[
+  'Normaliza o score pelo tamanho médio dos documentos do corpus','Ignora completamente o IDF de cada termo','Substitui o produto escalar por distância Euclidiana','Exige embeddings pré-treinados para funcionar'], c:0,
+  exp:'O BM25 também pondera pelo <span class="hl">tamanho do documento comparado à média do corpus</span> — um termo repetido num documento curto pesa mais do que a mesma repetição "diluída" num documento longo. É essa combinação (saturação + normalização por tamanho) que o torna padrão prático em busca e em RAG, inclusive em competições como a ESCI.'},
 {id:'5-13', star:true, mod:5, q:'Qual limitação do TF-IDF motiva diretamente o uso de embeddings?', opts:[
   'TF-IDF não captura semântica — sinônimos têm similaridade zero entre si','TF-IDF é incapaz de processar mais de um documento por vez','TF-IDF exige necessariamente uma GPU para ser calculado','TF-IDF só funciona corretamente em textos muito curtos'], c:0,
   exp:'TF-IDF ainda é <span class="hl-warn">correspondência exata de termos</span> — "carro" e "automóvel" continuam com similaridade zero entre si.'},
@@ -651,6 +657,9 @@ const QUESTIONS = [
 {id:'6-12', star:true, mod:6, q:'No "motor" de treino do Word2Vec, o que a rede realmente calcula a cada passo?', opts:[
   'Projeta a entrada na camada oculta e tenta prever o contexto via softmax','Calcula diretamente a distância de Levenshtein entre duas palavras do corpus','Conta quantas vezes cada palavra do vocabulário aparece no corpus inteiro','Ordena o vocabulário inteiro por frequência antes de iniciar o treino'], c:0,
   exp:'A palavra de entrada (one-hot) passa por uma projeção linear — a <span class="hl">camada oculta</span>, que depois vira o embedding — e a rede tenta acertar, via <span class="hl">softmax</span>, qual palavra aparece no contexto; o erro dessa previsão é propagado de volta para ajustar os pesos.'},
+{id:'6-13', star:true, mod:6, q:'Qual a limitação central de embeddings estáticos como o Word2Vec, em relação a palavras polissêmicas?', opts:[
+  'Cada palavra tem um único vetor fixo, mesmo quando o sentido muda com o contexto','Eles não conseguem representar nenhum substantivo','Eles exigem mais memória que o Bag of Words','Eles só funcionam para palavras em inglês'], c:0,
+  exp:'"Manga" (a fruta) e "manga" (parte da camisa) recebem exatamente o <span class="hl-warn">mesmo vetor</span> no Word2Vec — o modelo não separa os dois sentidos, porque o vetor é fixo, calculado uma vez no treino. É exatamente essa limitação que os <span class="hl">embeddings contextuais</span> dos Transformers resolvem: o vetor de "manga" passa a mudar conforme a frase.'},
 
 // ---- M7 ----
 {id:'7-1', star:true, mod:7, q:'O que é "data leakage" num pipeline de classificação de texto?', opts:[
@@ -694,12 +703,18 @@ const QUESTIONS = [
 {id:'8-2', star:true, mod:8, q:'No self-attention, o que representam Query, Key e Value?', opts:[
   'Três hiperparâmetros da taxa de aprendizado do modelo','Três vetores aprendidos: busca, oferta e conteúdo do token','Três formas diferentes de tokenizar o mesmo texto','As três camadas fixas que formam uma RNN'], c:1,
   exp:'<span class="hl">Query</span> = o que o token busca; <span class="hl">Key</span> = o que ele oferece; <span class="hl">Value</span> = seu conteúdo — somado e ponderado pela afinidade entre os dois primeiros.'},
+{id:'8-14', star:true, mod:8, q:'Na fórmula Attention(Q,K,V) = softmax(QKᵀ/√dk)·V, para que serve dividir por √dk antes do softmax?', opts:[
+  'Evita que os produtos escalares fiquem grandes demais e "saturem" o softmax, travando o gradiente','Converte os vetores Query e Key em números inteiros','Substitui a necessidade de treinar os vetores Value','Garante que a frase tenha sempre o mesmo número de tokens'], c:0,
+  exp:'Sem essa escala, produtos escalares entre vetores de dimensão alta tendem a crescer muito, empurrando o softmax pra uma região de <span class="hl-warn">gradiente quase zero</span> (decisões quase binárias, difícil de treinar). Dividir pela <span class="hl">raiz quadrada da dimensão de Key (√dk)</span> mantém os valores numa faixa estável antes do softmax.'},
 {id:'8-3', star:true, mod:8, q:'Qual frase melhor resume a diferença entre BERT e GPT (conforme o material da disciplina)?', opts:[
   'BERT é o "Leitor"; GPT é o "Escritor" de texto','Os dois modelos têm exatamente a mesma arquitetura','BERT serve apenas para gerar textos novos','GPT é bidirecional, e BERT não é'], c:0,
   exp:'Frase literal do material: BERT usa o <span class="hl">Encoder</span> (entende, bidirecional); GPT usa o <span class="hl">Decoder</span> (gera, unidirecional).'},
 {id:'8-4', star:true, mod:8, q:'Como o BERT aprende contexto bidirecional durante o pré-treino?', opts:[
   'Lendo cada frase de trás para frente duas vezes','Mascarando palavras e prevendo-as com os dois lados do contexto','Usando só o passado da frase, como o GPT','Ele não passa por nenhum tipo de pré-treino'], c:1,
   exp:'Prever a palavra mascarada (<span class="hl">Masked Language Model</span>) exige contexto dos dois lados simultaneamente — impossível pra um modelo unidirecional.'},
+{id:'8-15', star:true, mod:8, q:'Além do Masked Language Model (MLM), qual era o segundo objetivo de pré-treino original do BERT?', opts:[
+  'Next Sentence Prediction (NSP) — prever se uma frase B realmente segue a frase A no texto original','Prever o próximo token dado tudo que veio antes, como o GPT','Traduzir a frase inteira para outro idioma','Gerar uma nova frase do zero, sem nenhuma máscara'], c:0,
+  exp:'O BERT original foi treinado com <span class="hl">dois objetivos ao mesmo tempo</span>: MLM (mascarar e prever palavras, pro entendimento bidirecional) e <span class="hl">Next Sentence Prediction</span> — dado um par de frases, prever se a segunda realmente é a continuação da primeira no texto original, ou uma frase aleatória. NSP ajuda o modelo a aprender relações entre frases inteiras, não só entre palavras.'},
 {id:'8-5', mod:8, q:'Qual tokenizador o BERT usa, e qual o GPT usa?', opts:[
   'BERT usa WordPiece; GPT usa BPE (Byte-Pair Encoding)','Os dois usam tokenização por caractere isolado','BERT usa BPE; GPT usa WordPiece','Nenhum dos dois tokeniza em subpalavras'], c:0,
   exp:'Ambos trabalham com subpalavras, mas com algoritmos de vocabulário diferentes: <span class="hl">WordPiece</span> e <span class="hl">BPE</span>.'},
@@ -780,13 +795,14 @@ const ESSAY_PROMPTS = [
   'É esse passo extra que torna a lematização mais lenta que o stemming (que nunca consulta nada, só corta sufixo por regra)',
   'E é o que permite resolver casos irregulares que o stemming nunca resolveria, como "tiveram" → "ter" (não existe regra de corte de sufixo que chegue nisso)',
 ], hints:['dicionário organizado por classe', 'rio: substantivo × verbo', 'sem POS, não sabe qual entrada', 'POS primeiro, dicionário depois']},
-{id:'e1c', star:true, mod:1, q:'Pegue a frase "Os gatos pretos comeram rapidamente os peixinhos do aquário" e explique, passo a passo, o que aconteceria em cada etapa: tokenização, remoção de stopwords e lematização.', points:[
+{id:'e1c', star:true, mod:1, q:'Pegue a frase "Os gatos pretos comeram rapidamente os peixinhos do aquário" e explique, passo a passo, o que aconteceria em cada etapa: limpeza bruta, tokenização, remoção de stopwords e lematização.', points:[
+  'Antes de tokenizar, aplica-se uma limpeza bruta: regex (re.sub) remove ruído como HTML, URLs, emojis e pontuação solta, e o texto é padronizado para minúsculas',
   'Tokenização por palavra: separa em tokens — "Os", "gatos", "pretos", "comeram", "rapidamente", "os", "peixinhos", "do", "aquário"',
   'Remoção de stopwords: tira palavras de baixo valor informativo como "Os", "os", "do" — sobra "gatos", "pretos", "comeram", "rapidamente", "peixinhos", "aquário"',
   'Cuidado: remover stopwords é seguro aqui porque não há negação; numa frase como "não gostei", remover "não" inverteria o sentido',
   'Lematização precisa primeiro da classe gramatical (POS) de cada palavra: "gatos" (substantivo) → "gato"; "pretos" (adjetivo) → "preto"; "comeram" (verbo) → "comer"; "peixinhos" (substantivo, diminutivo) → "peixe"',
   'Resultado final lematizado: "gato preto comer rapidamente peixe aquário" — plural e tempo verbal desaparecem, mas a palavra continua reconhecível no dicionário',
-], hints:['separar em tokens primeiro', 'tirar palavras de baixo valor', 'cuidado com negação', 'POS antes do lema']},
+], hints:['limpeza bruta primeiro (regex)', 'separar em tokens', 'tirar palavras de baixo valor', 'POS antes do lema']},
 {id:'e2a', star:true, mod:2, q:'Explique por que o pipeline do spaCy é descrito como uma "linha de montagem", e como isso difere da abordagem do NLTK.', points:[
   'O tokenizador roda primeiro, aplicando regras e listas de exceção',
   'Cada componente seguinte (POS, parser de dependências, lematizador, NER) recebe o Doc já processado pelos anteriores',
@@ -868,6 +884,13 @@ const ESSAY_PROMPTS = [
   'Janela de contexto pequena tende a capturar vizinhos sintáticos (mesma função gramatical) — útil, por exemplo, pra um sistema de POS tagging ou correção gramatical',
   'Janela de contexto grande tende a capturar vizinhos temáticos (mesmo assunto) — útil, por exemplo, pra um sistema de recomendação de artigos pelo tema',
 ], hints:['contexto→palavra × palavra→contexto', 'rápido × melhor p/ raras', 'janela pequena = sintaxe', 'janela grande = tema']},
+{id:'e6c', star:true, mod:6, q:'Explique por que embeddings estáticos como Word2Vec não resolvem a polissemia, e o que muda com embeddings contextuais.', points:[
+  'Num embedding estático, cada palavra do vocabulário tem exatamente um vetor, fixado durante o treino e reutilizado sempre igual, não importa a frase',
+  'Isso falha pra palavras polissêmicas: "manga" (fruta) e "manga" (parte da camisa) recebem o mesmo vetor, mesmo tendo significados completamente diferentes',
+  'Embeddings contextuais (gerados por um Transformer, como BERT) calculam um vetor novo pra cada ocorrência da palavra, levando em conta as palavras ao redor na frase',
+  'Por isso o vetor de "manga" muda dependendo do contexto — ao lado de "suco" puxa pra um lado do espaço, ao lado de "camisa" puxa pra outro',
+  'Essa é uma das razões centrais pela qual modelos baseados em Transformer substituíram Word2Vec/GloVe como representação padrão',
+], hints:['vetor fixo × vetor por contexto', 'manga: fruta × camisa', 'mesma palavra, sentidos diferentes', 'Transformer resolve com contexto']},
 {id:'e7a', star:true, mod:7, q:'Explique o que é vazamento de dados (data leakage) num pipeline de classificação de texto, e por que ele produz métricas enganosamente otimistas.', points:[
   'Ocorre quando informação do conjunto de teste influencia o treino de alguma forma',
   'Exemplo clássico: ajustar (fit) o vetorizador sobre todos os dados antes de separar treino e teste',
@@ -896,14 +919,15 @@ const ESSAY_PROMPTS = [
   'Esses scores passam por um softmax, virando pesos de atenção que somam 1',
   'A nova representação do token é a soma dos vetores Value de todos os tokens, ponderada por esses pesos',
   'Isso permite que cada token "escute" mais os tokens realmente relevantes para seu sentido, e menos os irrelevantes',
-], hints:['Query busca, Key oferece', 'produto escalar + softmax', 'soma ponderada de Values', 'token escuta o relevante']},
+  'A fórmula completa é Attention(Q,K,V) = softmax(QKᵀ/√dk)·V — dividir pela raiz de dk evita que o produto escalar fique grande demais e sature o softmax, travando o gradiente',
+], hints:['Query busca, Key oferece', 'produto escalar + softmax', 'soma ponderada de Values', 'divide por √dk pra não saturar']},
 {id:'e8b', star:true, mod:8, q:'Explique a diferença fundamental entre BERT e GPT em termos de arquitetura e do tipo de pré-treino usado.', points:[
   'BERT usa apenas o Encoder do Transformer; é bidirecional (lê os dois lados do contexto ao mesmo tempo)',
-  'O pré-treino do BERT é via Masked Language Model: mascara palavras e as prevê usando contexto dos dois lados',
+  'O pré-treino do BERT combina dois objetivos: Masked Language Model (mascara palavras e as prevê usando contexto dos dois lados) e Next Sentence Prediction (prever se a frase B realmente segue a frase A)',
   'GPT usa apenas o Decoder do Transformer; é unidirecional, com máscara causal (só enxerga o passado)',
   'O pré-treino do GPT é prever o próximo token, dado tudo que veio antes',
   'BERT é voltado a entendimento/classificação; GPT é voltado a geração de texto',
-], hints:['Encoder bidirecional', 'Decoder causal/unidirecional', 'Masked LM × prever próximo token', 'entender × gerar']},
+], hints:['Encoder bidirecional', 'Decoder causal/unidirecional', 'MLM + NSP × prever próximo token', 'entender × gerar']},
 {id:'e8c', star:true, mod:8, q:'Explique, do começo ao fim, o que acontece com uma frase ao passar por uma camada do Transformer — da entrada até a saída.', points:[
   'Cada palavra vira um embedding, somado a um positional encoding — necessário porque a atenção sozinha trata a frase como um conjunto, sem noção de ordem',
   'Esses vetores passam por self-attention: cada token gera Query, Key e Value e "escuta" os outros tokens relevantes — tudo isso em paralelo para todos os tokens, não um de cada vez',
